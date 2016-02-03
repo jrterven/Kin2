@@ -83,7 +83,7 @@ while true
         
         % Number of bodies detected
         numBodies = size(bodies,2);
-        disp(['Bodies Detected: ' num2str(numBodies)])
+        %disp(['Bodies Detected: ' num2str(numBodies)])
        
         % first body info:
         %disp(bodies(1).TrackingState)
@@ -91,7 +91,9 @@ while true
         %disp(bodies(1).LeftHandState)
         
         % To get the joints on depth image space, you can use:
-        %pos2D = k2.mapCameraPoints2Depth(bodies(1).Position');
+%         if numBodies > 0
+%             pos2D = k2.mapCameraPoints2Depth(bodies(1).Position');
+%         end
          
         %To get the joints on color image space, you can use:
         %pos2D = k2.mapCameraPoints2Color(bodies(1).Position');

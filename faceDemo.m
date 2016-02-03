@@ -5,8 +5,9 @@
 %       Kinect20.Face.dll. 
 %       For example: C:\Program Files\Microsoft SDKs\Kinect\v2.0_1409\bin
 %
-% Juan R. Terven, January 2016.
-% jrterven@hotmail.com
+% Juan R. Terven, jrterven@hotmail.com
+% Diana M. Cordova, diana_mce@hotmail.com
+% January 2016
 
 addpath('Mex');
 clear all

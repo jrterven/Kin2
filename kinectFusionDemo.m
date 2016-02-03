@@ -5,8 +5,12 @@
 %       Kinect20.Fusion.dll 
 %       For example: C:\Program Files\Microsoft SDKs\Kinect\v2.0_1409\bin
 %
-% Juan R. Terven, January 2016.
-% jrterven@hotmail.com
+% WARNING: KINECT FUSION FUNCTIONALITY IS STILL IN BETA
+%          WE NEED TO FIX MEMORY LEAKAGE IN C++ CAUSING MATLAB TO CRASH AFTER
+%          A SECOND RUN.
+% Juan R. Terven, jrterven@hotmail.com
+% Diana M. Cordova, diana_mce@hotmail.com
+% January 2016
 
 addpath('../Mex');
 clear all
@@ -53,7 +57,7 @@ set(gcf,'keypress','k=get(gcf,''currentchar'');'); % listen keypress
 k=[];
 timedFrames = zeros(1,100);
 disp('Press q on any figure to exit')
-for i=1:100
+while true
     tic
     % Get frames from Kinect and save them on underlying buffer
     validData = k2.updateData;

@@ -1,8 +1,10 @@
 % VIDEODEMO Illustrates how to use the Kin2 class which is an interface for
 %   Kinect2 SDK functionality
 %
-% Juan R. Terven, October 2015.
-% jrterven@hotmail.com
+% Juan R. Terven, jrterven@hotmail.com
+% Diana M. Cordova, diana_mce@hotmail.com
+% October 2015.
+% 
 
 addpath('Mex');
 clear all

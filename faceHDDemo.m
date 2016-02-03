@@ -5,8 +5,9 @@
 %       Kinect20.Face.dll. 
 %       For example: C:\Program Files\Microsoft SDKs\Kinect\v2.0_1409\bin
 %
-% Juan R. Terven, January 2016.
-% jrterven@hotmail.com
+% Juan R. Terven, jrterven@hotmail.com
+% Diana M. Cordova, diana_mce@hotmail.com
+% January 2016
 
 addpath('Mex');
 clear all
@@ -83,7 +84,7 @@ while true
         % 3) display HD face model vertices(1347 points)?
         % 4) display text information (animation units)?
         % 5) text font size in pixels
-        
+        k2.drawHDFaces(c.ax,faces,true,true,20);
              
         % Plot face model points
         if size(faces,2) > 0
