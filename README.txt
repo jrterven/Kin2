@@ -21,4 +21,4 @@ Demos:
 6) bodyIndexDemo.m: displays body index frames
 7) faceDemo.m: detect and track faces showing the facial landmarks and face properties
 8) faceHDDemo.m: detect and track faces showing the 17 animation units and the high definition model
-9) kinectFusionDemo.m: demostrates the use of Kinect Fusion. This is still in BETA. Need fixing memory leakage in C++ causing MATLAB to crash on a second run.
+9) kinectFusionDemo.m: demonstrates the use of Kinect Fusion. This is still in BETA. Need fixing memory leakage in C++ causing MATLAB to crash on a second run.
