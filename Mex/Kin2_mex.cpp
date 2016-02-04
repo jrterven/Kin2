@@ -12,6 +12,11 @@
 ///
 ///		Author: 
 ///			Juan R. Terven.	jrterven@hotmail.com
+///         Diana M. Cordova, diana_mce@hotmail.com
+///
+///     Citation:
+///     J. R. Terven, D. M. Cordova, "A Kinect 2 Toolbox for MATLAB", 
+///     https://github.com/jrterven/Kin2, 2016.
 ///		
 ///		Creation Date: Oct/07/2015
 ///     Modifications: 
@@ -102,6 +107,7 @@ public:
     /************ Mappings **************/
     void mapDepthPoints2Color(double depthCoords[], int size, UINT16 colorCoords[]);
     void mapDepthPoints2Camera(double depthCoords[], int size, double cameraCoords[]);
+    bool mapDepthFrame2Color(ColorSpacePoint* depth2ColorMapping);
 
 	void mapColorPoints2Depth(double colorCoords[], int size, UINT16 depthCoords[]);
     void mapColorPoints2Camera(double colorCoords[], int size, double cameraCoords[]);
@@ -1006,6 +1012,17 @@ void Kin2::mapDepthPoints2Camera(double depthCoords[], int size, double cameraCo
 	delete[] depthValues; depthValues = NULL;
 	delete[] cameraPoints; cameraPoints = NULL;    
 } // end mapDepthPoints2Camera
+
+bool Kin2::mapDepthFrame2Color(ColorSpacePoint* depth2ColorMapping)
+{
+	// Create coordinate mapping from depth to color
+	HRESULT hr;
+	hr = m_pCoordinateMapper->MapDepthFrameToColorSpace(cDepthWidth * cDepthHeight,
+		(UINT16*)m_pDepthArray16U, cDepthWidth * cDepthHeight, depth2ColorMapping);
+
+	if (SUCCEEDED(hr)) return true;
+	else return false;
+} // end mapDepthFrame2Color
 
 
 ///////// Function: mapColorPoint2Depth //////////////////////////////
@@ -2343,6 +2360,36 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                
         return;
     }
+    
+    // mapDepthFrame2Color method
+//    if (!strcmp("mapDepthFrame2Color", cmd)) 
+//    {      
+        /*
+         // Get input parameter (depth coordinates)
+        double *depthCoords;
+        depthCoords = (double*)mxGetData(prhs[2]); 
+        
+        // Get input parameter (size)
+        int *size;
+        size = (int*)mxGetData(prhs[3]);       
+        
+        // Prepare output array
+        UINT16 *colorCoordinates;   // pointer to output data
+        int outDim[2]={*size,2};        // two values (row vector)
+        
+         // Reserve space for output array
+        plhs[0] = mxCreateNumericArray(2, outDim, mxUINT16_CLASS, mxREAL); 
+        
+        // Assign pointers to the output parameters
+        colorCoordinates = (UINT16*)mxGetPr(plhs[0]);     
+        */
+//        ColorSpacePoint* pDepth2Color = new ColorSpacePoint[217088];
+        
+        // call the class method
+//        bool resutl = Kin2_instance->mapDepthFrame2Color();
+               
+//        return;
+//    }
     
     // mapDepthPoints2Camera method
     if (!strcmp("mapDepthPoints2Camera", cmd)) 

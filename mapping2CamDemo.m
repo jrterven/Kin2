@@ -11,9 +11,13 @@
 %     back to color space and printed to command window.
 %   - Press 'q' to exit.
 %
-% Juan R. Terven, October 2015.
-% jrterven@hotmail.com
-
+% Juan R. Terven, jrterven@hotmail.com
+% Diana M. Cordova, diana_mce@hotmail.com
+% 
+% Citation:
+% J. R. Terven, D. M. Cordova, "A Kinect 2 Toolbox for MATLAB", 
+% https://github.com/jrterven/Kin2, 2016.
+%
 addpath('Mex');
 clear all
 close all

@@ -1,8 +1,12 @@
 % POINTCLOUDDEMO Illustrates how to use the Kin2 class to get the
 % pointcloud in camera space
 %
-% Juan R. Terven, January 2016.
-% jrterven@hotmail.com
+% Juan R. Terven, jrterven@hotmail.com
+% Diana M. Cordova, diana_mce@hotmail.com
+% 
+% Citation:
+% J. R. Terven, D. M. Cordova, "A Kinect 2 Toolbox for MATLAB", 
+% https://github.com/jrterven/Kin2, 2016.
 
 addpath('Mex');
 clear all

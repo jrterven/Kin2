@@ -3,7 +3,10 @@
 %
 % Juan R. Terven, jrterven@hotmail.com
 % Diana M. Cordova, diana_mce@hotmail.com
-% October 2015.
+% 
+% Citation:
+% J. R. Terven, D. M. Cordova, "A Kinect 2 Toolbox for MATLAB", 
+% https://github.com/jrterven/Kin2, 2016.
 % 
 
 addpath('Mex');

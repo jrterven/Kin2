@@ -173,7 +173,21 @@ classdef Kin2 < handle
         function varargout = getFaces(this, varargin)
             % getFaces - return structure array with the properties for
             % each found face. You must call update before and verify that
-            % there is valid data
+            % there is valid data.
+            % The returned structure has the following fields for each
+            % detected face:
+            % - FaceBox: rectangle coordinates representing the face position in
+            %   color space. [left, top, right, bottom].
+            % - FacePoints: 2 x 5 matrix representing 5 face landmarks: 
+            %   left eye, right eye, nose, right and left mouth corners.
+            % - FaceRotation: 1 x 3 vector containing: pitch, yaw, roll angles
+            % - FaceProperties: 1 x 8 vector containing the detection result of
+            %   each of the face properties. 
+            %   The face properties are:
+            %   Happy, Engaged, WearingGlasses, LeftEyeClosed, RightEyeClosed,
+            %   MouthOpen, MouthMoved, LookingAway
+            %   The detection results are: 
+            %   Unknown = 0, No = 1, Maybe = 2, Yes = 3;
             % See faceDemo.m
             [varargout{1:nargout}] = Kin2_mex('getFaces', this.objectHandle, varargin{:});
         end
@@ -182,6 +196,21 @@ classdef Kin2 < handle
             % getHDFaces - return structure array with the following information:
             % 
             % You must call update before and verify that there is valid data
+            % The returned stucture has the following fields for each
+            % detected face:
+            % - FaceBox: rectangle coordinates representing the face position in
+            %   color space. [left, top, right, bottom].        
+            % - FaceRotation: 1 x 3 vector containing: pitch, yaw, roll angles
+            % - HeadPivot: 1 x 3 vector, computed center of the head, 
+            %   which the face may be rotated around. 
+            %   This point is defined in the Kinect body coordinate system. 
+            % - AnimationUnits: 17 animation units (AUs). Most of the AUs are 
+            %   expressed as a numeric weight varying between 0 and 1.
+            %   For details see https://msdn.microsoft.com/en-us/library/microsoft.kinect.face.faceshapeanimations.aspx
+            % - ShapeUnits: 94 hape units (SUs). Each SU is expressed as a 
+            %   numeric weight that typically varies between -2 and +2.
+            %   For details see https://msdn.microsoft.com/en-us/library/microsoft.kinect.face.faceshapedeformations.aspx
+            % - FaceModel: 3 x 1347 points of a 3D face model computed by face capture
             % See faceHDDemo.m
             [varargout{1:nargout}] = Kin2_mex('getHDFaces', this.objectHandle, varargin{:});
         end
@@ -197,14 +226,14 @@ classdef Kin2 < handle
         end
         
                 %% Depth mappings        
-%         function varargout = mapDepthFrame2Color(this, varargin)
-%             % mapDepthFrame2Color - map an input depth image
-%             % to color coordinates.
-%             % Input: cDepthHeight x cDepthWidth matrix
-%             % Output: cDepthHeight x cDepthWidth mapping matrix
-%             inputSize = size(varargin{1},1);
-%             [varargout{1:nargout}] = Kin2_mex('mapDepthFrame2Color', this.objectHandle, varargin{1},uint32(inputSize));
-%         end
+        function varargout = mapDepthFrame2Color(this, varargin)
+            % mapDepthFrame2Color - map an input depth image
+            % to color coordinates.
+            % Input: cDepthHeight x cDepthWidth matrix
+            % Output: cDepthHeight x cDepthWidth mapping matrix
+            inputSize = size(varargin{1},1);
+            [varargout{1:nargout}] = Kin2_mex('mapDepthFrame2Color', this.objectHandle, varargin{1},uint32(inputSize));
+        end
                 
         function varargout = mapDepthPoints2Camera(this, varargin)
             % mapDepthPoints2Camera - map the input points from depth 
@@ -215,6 +244,7 @@ classdef Kin2 < handle
             inputSize = size(varargin{1},1);
             [varargout{1:nargout}] = Kin2_mex('mapDepthPoints2Camera', this.objectHandle, varargin{1},uint32(inputSize));
         end
+        
         
         %% Color mappings
         function varargout = mapColorPoints2Depth(this, varargin)

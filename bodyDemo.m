@@ -1,8 +1,12 @@
 % BODYDEMO Illustrates how to use the Kin2 object to get and draw the
 % Skeleton data
 %
-% Juan R. Terven, October 31 2015.
-% jrterven@hotmail.com
+% Juan R. Terven, jrterven@hotmail.com
+% Diana M. Cordova, diana_mce@hotmail.com
+% 
+% Citation:
+% J. R. Terven, D. M. Cordova, "A Kinect 2 Toolbox for MATLAB", 
+% https://github.com/jrterven/Kin2, 2016.
 
 addpath('Mex');
 clear all
