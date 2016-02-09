@@ -453,7 +453,6 @@ classdef Kin2 < handle
             % 4) displayText: display text information?
             % 5) fontSize: text font size in pixels
             % See faceDemo.m
-            disp(nargin)
             if nargin < 6
                 fontSize = 20;
             end

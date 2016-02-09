@@ -59,7 +59,6 @@ set(gcf,'keypress','k=get(gcf,''currentchar'');'); % listen keypress
 
 % Loop until pressing 'q' on any figure
 k=[];
-timedFrames = zeros(1,100);
 disp('Press q on any figure to exit')
 while true
     tic
@@ -98,7 +97,6 @@ while true
     end
   
     pause(0.02)
-    timedFrames(i) = toc;
 end
 
 % Close kinect object
