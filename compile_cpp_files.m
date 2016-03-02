@@ -16,7 +16,7 @@ function compile_cpp_files
 %      Kinect20.Fusion.dll and Kinect20.Face.dll 
 %      For example: C:\Program Files\Microsoft SDKs\Kinect\v2.0_1409\bin
 %   4) Close Matlab and open it again.
-%   4) Run this function
+%   5) Run this function
 %
 % Author: Juan R. Terven, jrterven@hotmail.com
 IncludePath = 'C:\Program Files\Microsoft SDKs\Kinect\v2.0_1409\inc';

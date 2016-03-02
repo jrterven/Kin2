@@ -6,10 +6,11 @@ Requirements:
 - Matlab 2013a or newer (for Visual Studio 2012 support)
 
 Usage:
-1) Set the compiler using mex -setup
+1) Set the compiler using mex -setup C++
 2) Open compile_cpp_files and set the include and lib paths of Kinect2 SDK (see the provided paths)
 3) Add to the windows path the bin directory containing the Kinect20.Fusion.dll and Kinect20.Face.dll 
    For example: C:\Program Files\Microsoft SDKs\Kinect\v2.0_1409\bin
+4) If you modify Windows path, close Matlab and open it again in order to detect the changes.
 3) Run compile_cpp_files.m
 
 Demos:
@@ -22,3 +23,4 @@ Demos:
 7) faceDemo.m: detect and track faces showing the facial landmarks and face properties
 8) faceHDDemo.m: detect and track faces showing the 17 animation units and the high definition model
 9) kinectFusionDemo.m: demonstrates the use of Kinect Fusion. This is still in BETA. Need fixing memory leakage in C++ causing MATLAB to crash on a second run.
+10) calibrationDemo.m: obtain cameras intrinsic parameters.

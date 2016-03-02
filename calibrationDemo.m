@@ -1,5 +1,9 @@
-% VIDEODEMO Illustrates how to use the Kin2 class which is an interface for
-%   Kinect2 SDK functionality
+% CALIBRATIONDEMO Illustrates how to use the Kin2 class to obtain the
+% cameras' intrinsic parameters.
+%
+% Usage: 
+%   press 'd' to obtain the depth camera intrinsics.
+%   press 'c' to obtain the color camera intrinsics.
 %
 % Juan R. Terven, jrterven@hotmail.com
 % Diana M. Cordova, diana_mce@hotmail.com
@@ -16,7 +20,7 @@ close all
 % Create Kinect 2 object and initialize it
 % Available sources: 'color', 'depth', 'infrared', 'body_index', 'body',
 % 'face' and 'HDface'
-k2 = Kin2('color','depth','infrared');
+k2 = Kin2('color','depth');
 
 % images sizes
 depth_width = 512; depth_height = 424; outOfRange = 4000;
@@ -27,7 +31,6 @@ colorScale = 0.4;
 
 % Create matrices for the images
 depth = zeros(depth_height,depth_width,'uint16');
-infrared = zeros(depth_height,depth_width,'uint16');
 color = zeros(color_height*colorScale,color_width*colorScale,3,'uint8');
 
 % depth stream figure
@@ -40,11 +43,6 @@ set(gcf,'keypress','k=get(gcf,''currentchar'');'); % listen keypress
 % color stream figure
 figure, h2 = imshow(color,[]);
 title('Color Source (press q to exit)');
-set(gcf,'keypress','k=get(gcf,''currentchar'');'); % listen keypress
-
-% infrared stream figure
-figure, h3 = imshow(infrared);
-title('Infrared Source (press q to exit)');
 set(gcf,'keypress','k=get(gcf,''currentchar'');'); % listen keypress
 
 % Loop until pressing 'q' on any figure
@@ -61,7 +59,6 @@ while true
         % Copy data to Matlab matrices
         depth = k2.getDepth;
         color = k2.getColor;
-        infrared = k2.getInfrared;
 
         % update depth figure
         depth(depth>outOfRange) = outOfRange; % truncate depht
@@ -71,15 +68,36 @@ while true
         color = imresize(color,colorScale);
         set(h2,'CData',color); 
 
-        % update infrared figure
-        %infrared = imadjust(infrared,[0 0.2],[0.5 1]);
-        infrared = imadjust(infrared,[],[],0.5);
-        set(h3,'CData',infrared); 
     end
     
     % If user presses 'q', exit loop
     if ~isempty(k)
-        if strcmp(k,'q'); break; end;
+        if strcmp(k,'q') 
+            break; 
+        elseif strcmp(k,'d')
+            calib = k2.getDepthIntrinsics;
+            disp(' ');
+            disp('------------ Depth Intrinsics ------------')
+            disp(['Focal Length X: ' num2str(calib.FocalLengthX)]);
+            disp(['Focal Length Y: ' num2str(calib.FocalLengthY)]);
+            disp(['Principal Point X: ' num2str(calib.PrincipalPointX)]);
+            disp(['Principal Point Y: ' num2str(calib.PrincipalPointY)]);
+            disp(['Radial Distortion 2nd order: ' num2str(calib.RadialDistortionSecondOrder)]);
+            disp(['Radial Distortion 4th order: ' num2str(calib.RadialDistortionFourthOrder)]);
+            disp(['Radial Distortion 6th order: ' num2str(calib.RadialDistortionSixthOrder)]);
+            disp('--------------------------------------------');
+            k = [];
+        elseif strcmp(k,'c')
+            calib = k2.getColorIntrinsics;
+            disp(' ');
+            disp('------------ Color Intrinsics ------------')
+            disp(['Focal Length X: ' num2str(calib.FocalLengthX)]);
+            disp(['Focal Length Y: ' num2str(calib.FocalLengthY)]);
+            disp(['Principal Point X: ' num2str(calib.PrincipalPointX)]);
+            disp(['Principal Point Y: ' num2str(calib.PrincipalPointY)]);
+            k = [];
+        end;
+    
     end
   
     pause(0.02)

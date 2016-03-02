@@ -30,6 +30,7 @@
 ///			Jan/25/2016: Face processing
 ///			Jan/25/2016: Body index
 ///         Jan/31/2016: HD Face processing
+///         Mar/01/2016: Depth camera intrinsics
 ///////////////////////////////////////////////////////////////////////////
 #include "mex.h"
 #include "class_handle.hpp"
@@ -100,9 +101,12 @@ public:
     void getColor(unsigned char rgbImage[], bool& validColor);
     void getInfrared(UINT16 infrared[],bool& validInfrared);
     void getBodyIndex(BYTE bodyIndex[],bool& validBodyIndex);
+    
+    /************ Data Sources **************/
     void getPointCloud(double pointCloud[], int size, bool& validData);
     void getFaces(std::vector<k2::FaceData>& facesData);
     void getHDFaces(std::vector<k2::HDFaceData>& facesData);
+    void getDepthIntrinsics(CameraIntrinsics &intrinsics);
     
     /************ Mappings **************/
     void mapDepthPoints2Color(double depthCoords[], int size, UINT16 colorCoords[]);
@@ -1487,6 +1491,11 @@ void Kin2::getHDFaces(std::vector<k2::HDFaceData>& facesData)
 	facesData = m_HDfacesData;
 }
 
+void Kin2::getDepthIntrinsics(CameraIntrinsics &intrinsics)
+{
+    m_pCoordinateMapper->GetDepthCameraIntrinsics(&intrinsics);
+}
+
 
 /***********************************************************************/
 /********************  Kinect Fusion functions *************************/
@@ -2325,6 +2334,53 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         
         return;
  
+    }
+    
+    // getDepthIntrinsics method
+    if (!strcmp("getDepthIntrinsics", cmd)) 
+    { 
+        //Assign field names
+        const char *field_names[] = {"FocalLengthX", "FocalLengthY",
+                                "PrincipalPointX","PrincipalPointY",
+                                "RadialDistortionSecondOrder",
+                                "RadialDistortionFourthOrder",
+                                "RadialDistortionSixthOrder"};  
+                                
+        CameraIntrinsics intrinsics = {};
+        
+        // call the class method
+        Kin2_instance->getDepthIntrinsics(intrinsics);
+        
+        //Allocate memory for the structure
+        mwSize dims[2] = {1, 1};
+        plhs[0] = mxCreateStructArray(2,dims,7,field_names);
+        
+        // Copy the intrinsic parameters to the the output variables
+        
+        // I AM HERE
+        // output data
+        mxArray *fx, *fy, *ppx, *ppy, *rd2, *rd4, *rd6;
+
+        //Create mxArray data structures to hold the data
+        //to be assigned for the structure.
+        fx  = mxCreateDoubleScalar(intrinsics.FocalLengthX);
+        fy  = mxCreateDoubleScalar(intrinsics.FocalLengthY);
+        ppx  = mxCreateDoubleScalar(intrinsics.PrincipalPointX);
+        ppy  = mxCreateDoubleScalar(intrinsics.PrincipalPointY);
+        rd2  = mxCreateDoubleScalar(intrinsics.PrincipalPointY);
+        rd4  = mxCreateDoubleScalar(intrinsics.RadialDistortionFourthOrder);
+        rd6  = mxCreateDoubleScalar(intrinsics.RadialDistortionSixthOrder);
+
+        //Assign the output matrices to the struct
+        mxSetFieldByNumber(plhs[0],0,0, fx);
+        mxSetFieldByNumber(plhs[0],0,1, fy);
+        mxSetFieldByNumber(plhs[0],0,2, ppx);
+        mxSetFieldByNumber(plhs[0],0,3, ppy);
+        mxSetFieldByNumber(plhs[0],0,4, rd2);
+        mxSetFieldByNumber(plhs[0],0,5, rd4);
+        mxSetFieldByNumber(plhs[0],0,6, rd6);
+                
+        return;
     }
     
     // mapDepthPoints2Color method

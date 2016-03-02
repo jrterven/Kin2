@@ -59,6 +59,12 @@ classdef Kin2 < handle
         
         % Face Animation units
         faceAnimationUnits = cell(17,1);
+        
+        % Color calibration
+        colorCalib = false;
+        colorFL = 1000; % focal length
+        colorPPX = 960; % ppx
+        colorPPY = 540; % ppy  
     end
     
     methods        
@@ -137,42 +143,43 @@ classdef Kin2 < handle
                 
         function varargout = getDepth(this, varargin)
             % getDepth - return depth frame from Kinect2. You must call
-            % updateKin2 before and verify that there is valid data.
+            % updateData before and verify that there is valid data.
             % See videoDemo.m
             [varargout{1:nargout}] = Kin2_mex('getDepth', this.objectHandle, varargin{:});
         end
                 
         function varargout = getColor(this, varargin)
             % getColor - return color frame from Kinect2. You must call
-            % updateKin2 before and verify that there is valid data.
+            % updateData before and verify that there is valid data.
             % See videoDemo.m
             [varargout{1:nargout}] = Kin2_mex('getColor', this.objectHandle, varargin{:});
         end
                 
         function varargout = getInfrared(this, varargin)
             % getInfrared - return infrared frame from Kinect2. You must call
-            % updateKin2 before and verify that there is valid data.
+            % updateData before and verify that there is valid data.
             % See videoDemo.m
             [varargout{1:nargout}] = Kin2_mex('getInfrared', this.objectHandle, varargin{:});
         end
         
+        %% Data Sources
         function varargout = getBodyIndex(this, varargin)
             % getBodyIndex - return body index frame from Kinect2. You must call
-            % updateKin2 before and verify that there is valid data.
+            % updateData before and verify that there is valid data.
             % See bodyIndexDemo.m
             [varargout{1:nargout}] = Kin2_mex('getBodyIndex', this.objectHandle, varargin{:});
         end
         
         function varargout = getPointCloud(this, varargin)
             % getPointCloud - return nx3 camera space values from Kinect2. You must call
-            % updateKin2 before and verify that there is valid data.
+            % updateData before and verify that there is valid data.
             % See pointCloudDemo.m
             [varargout{1:nargout}] = Kin2_mex('getPointCloud', this.objectHandle, varargin{:});
         end
         
         function varargout = getFaces(this, varargin)
             % getFaces - return structure array with the properties for
-            % each found face. You must call update before and verify that
+            % each found face. You must call updateData before and verify that
             % there is valid data.
             % The returned structure has the following fields for each
             % detected face:
@@ -195,7 +202,7 @@ classdef Kin2 < handle
         function varargout = getHDFaces(this, varargin)
             % getHDFaces - return structure array with the following information:
             % 
-            % You must call update before and verify that there is valid data
+            % You must call updateData before and verify that there is valid data
             % The returned stucture has the following fields for each
             % detected face:
             % - FaceBox: rectangle coordinates representing the face position in
@@ -215,6 +222,46 @@ classdef Kin2 < handle
             [varargout{1:nargout}] = Kin2_mex('getHDFaces', this.objectHandle, varargin{:});
         end
         
+        function varargout = getDepthIntrinsics(this, varargin)
+            % getDepthIntrinsics - return the depth camera intrinsic
+            % parameters inside a structure containing:
+            % FocalLengthX, FocalLengthY, PrincipalPointX, PrincipalPointY,
+            % RadialDistortionSecondOrder, RadialDistortionFourthOrder, 
+            % RadialDistortionSixthOrder
+            % Usage: You must call updateData before and verify that there is valid data.
+            % See calibrationDemo.m
+            [varargout{1:nargout}] = Kin2_mex('getDepthIntrinsics', this.objectHandle, varargin{:});
+        end
+        
+        function intrinsics = getColorIntrinsics(this, varargin)
+            if this.colorCalib
+                intrinsics = struct('FocalLengthX',this.colorFL, ...
+                    'FocalLengthY',this.colorFL,'PrincipalPointX',this.colorPPX, ...
+                    'PrincipalPointY',this.colorPPY);
+            else
+                % Get point cloud
+                pointcloud = this.getPointCloud;                        
+                proj2d = this.mapCameraPoints2Color(pointcloud);
+                % Generates temporary file
+                save('calibData.mat','pointcloud','proj2d');
+
+                % Minimize cost function
+                x0 = [this.colorFL, this.colorPPX, this.colorPPY, 0,0,0,0,0,0];
+                options = optimset('Algorithm','levenberg-marquardt');
+                x = fsolve('calibCostFun',x0,options);
+                this.colorFL = x(1);
+                this.colorPPX = x(2);
+                this.colorPPY = x(3);
+
+                intrinsics = struct('FocalLengthX',this.colorFL, ...
+                    'FocalLengthY',this.colorFL,'PrincipalPointX',this.colorPPX, ...
+                    'PrincipalPointY',this.colorPPY);
+                    
+                 this.colorCalib = true;
+                 delete('calibData.mat');
+            end
+        end
+        
         %% Depth mappings        
         function varargout = mapDepthPoints2Color(this, varargin)
             % mapDepthPoints2Color - map the input points from depth 
@@ -227,6 +274,7 @@ classdef Kin2 < handle
         
                 %% Depth mappings        
         function varargout = mapDepthFrame2Color(this, varargin)
+            % NOT READY YET
             % mapDepthFrame2Color - map an input depth image
             % to color coordinates.
             % Input: cDepthHeight x cDepthWidth matrix
@@ -637,5 +685,9 @@ classdef Kin2 < handle
             % See kinectFusionDemo.m
             [varargout{1:nargout}] = Kin2_mex('KF_reset', this.objectHandle, varargin{:});
          end
+           
     end
 end
+
+    
+    
