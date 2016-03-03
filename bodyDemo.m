@@ -74,30 +74,40 @@ while true
         %set(c.im,'CData',color); 
 
         % Get 3D bodies joints 
+        % Input parameter can be 'Quat' or 'Euler' for the joints
+        % orientations.
         % getBodies returns a structure array.
         % The structure array (bodies) contains 6 bodies at most
         % Each body has:
         % -Position: 3x25 matrix containing the x,y,z of the 25 joints in
         %   camera space coordinates
+        % - Orientation: 
+        %   If input parameter is 'Quat': 4x25 matrix containing the 
+        %   orientation of each joint in [x; y; z, w]
+        %   If input parameter is 'Euler': 3x25 matrix containing the 
+        %   orientation of each joint in [Pitch; Yaw; Roll] 
         % -TrackingState: state of each joint. These can be:
         %   NotTracked=0, Inferred=1, or Tracked=2
         % -LeftHandState: state of the left hand
         % -RightHandState: state of the right hand
-        bodies = k2.getBodies;
+        bodies = k2.getBodies('Quat');
         
         % Number of bodies detected
         numBodies = size(bodies,2);
         %disp(['Bodies Detected: ' num2str(numBodies)])
        
-        % first body info:
-        %disp(bodies(1).TrackingState)
-        %disp(bodies(1).RightHandState)
-        %disp(bodies(1).LeftHandState)
+        if numBodies > 0
+            % first body info:
+            %disp(bodies(1).TrackingState)
+            %disp(bodies(1).RightHandState)
+            %disp(bodies(1).LeftHandState)
+            
+            disp(bodies(1).Orientation(:,12));           
+
         
-        % To get the joints on depth image space, you can use:
-%         if numBodies > 0
+            % To get the joints on depth image space, you can use:
 %             pos2D = k2.mapCameraPoints2Depth(bodies(1).Position');
-%         end
+         end
          
         %To get the joints on color image space, you can use:
         %pos2D = k2.mapCameraPoints2Color(bodies(1).Position');

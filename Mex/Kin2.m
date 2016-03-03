@@ -339,18 +339,34 @@ classdef Kin2 < handle
                 
         function varargout = getBodies(this, varargin)
             % getBodies - Get 3D bodies joints 
-            % Input: none
+            % Input: Type of joints orientation output. It can be 'Quat' or
+            % 'Euler'
             % Output: Structure array.
             % The structure array (bodies) contains 6 bodies at most
             % Each body has:
             % -Position: 3x25 matrix containing the x,y,z of the 25 joints in
             %   camera space coordinates
+            % - Orientation: 
+            %   If input parameter is 'Quat': 4x25 matrix containing the 
+            %   orientation of each joint in [x; y; z, w]
+            %   If input parameter is 'Euler': 3x25 matrix containing the 
+            %   orientation of each joint in [Pitch; Yaw; Roll] 
             % -TrackingState: state of each joint. These can be:
             %   NotTracked=0, Inferred=1, or Tracked=2
             % -LeftHandState: state of the left hand
             % -RightHandState: state of the right hand
             % See bodyDemo.m
-            [varargout{1:nargout}] = Kin2_mex('getBodies', this.objectHandle, varargin{:});
+            quatType = ismember('Quat',varargin);
+            eulerType = ismember('Euler',varargin);
+            orientType = uint32(0); % Quaternion by default
+            if quatType 
+                orientType = uint32(0);      
+            elseif(eulerType) 
+                orientType = uint32(1); 
+            else
+                disp('getBodies: Orientation type not specified. Using Quaternion by default');
+            end
+            [varargout{1:nargout}] = Kin2_mex('getBodies', this.objectHandle, orientType);
         end
         
         function drawBodies(this,handle,bodies,destination,jointsSize, ...

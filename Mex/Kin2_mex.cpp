@@ -31,6 +31,7 @@
 ///			Jan/25/2016: Body index
 ///         Jan/31/2016: HD Face processing
 ///         Mar/01/2016: Depth camera intrinsics
+///         Mar/03/2016: Add Joints orientations
 ///////////////////////////////////////////////////////////////////////////
 #include "mex.h"
 #include "class_handle.hpp"
@@ -120,7 +121,8 @@ public:
     void mapCameraPoints2Color(double cameraCoords[], int size, UINT16 colorCoords[]);
     
     /************ Body Tracking *****************/
-    void getBodies(std::vector<std::vector<Joint> >& bodiesJoints, 
+    void getBodies(std::vector<std::vector<Joint> >& bodiesJoints,
+        std::vector<std::vector<JointOrientation> >& bodiesJointsOrientations,
         std::vector<HandState>& lhs, std::vector<HandState>& rhs);
     
     /*************** Kinect Fusion***************/
@@ -1201,7 +1203,8 @@ void Kin2::mapCameraPoints2Color(double cameraCoords[], int size, UINT16 colorCo
 	delete[] camPoints; camPoints = NULL; 
 } // end mapCameraPoints2Color    
 
-void Kin2::getBodies(std::vector<std::vector<Joint> >& bodiesJoints, 
+void Kin2::getBodies(std::vector<std::vector<Joint> >& bodiesJoints,
+        std::vector<std::vector<JointOrientation> >& bodiesJointsOrientations,
         std::vector<HandState>& lhs, std::vector<HandState>& rhs)
 {
 	HRESULT hr;
@@ -1217,6 +1220,7 @@ void Kin2::getBodies(std::vector<std::vector<Joint> >& bodiesJoints,
 			if (SUCCEEDED(hr) && bTracked)
 			{
 				Joint joints[JointType_Count];
+                JointOrientation jointsOrientations[JointType_Count];
 				HandState leftHandState = HandState_Unknown;
 				HandState rightHandState = HandState_Unknown;
 
@@ -1224,13 +1228,20 @@ void Kin2::getBodies(std::vector<std::vector<Joint> >& bodiesJoints,
 				pBody->get_HandRightState(&rightHandState);
 
 				hr = pBody->GetJoints(_countof(joints), joints);
+                if (SUCCEEDED(hr))
+                    hr = pBody->GetJointOrientations(_countof(joints), jointsOrientations);
 
 				// Copy array of Joints to vector of joints
 				std::vector<Joint> vJoints(std::begin(joints), std::end(joints));
+                
+                // Copy array of Joints orientations to vector
+                std::vector<JointOrientation> vJointsOrientations
+                        (std::begin(jointsOrientations), std::end(jointsOrientations));
 
 				if (SUCCEEDED(hr))
 				{
 					bodiesJoints.push_back(vJoints);
+                    bodiesJointsOrientations.push_back(vJointsOrientations);
 					lhs.push_back(leftHandState);
 					rhs.push_back(rightHandState);
 				}
@@ -2116,7 +2127,7 @@ void extractRotationInDegrees(Vector4& pQuaternion, double& dPitch, double& dYaw
 	double z = pQuaternion.z;
 	double w = pQuaternion.w;
 
-	// convert face rotation quaternion to Euler angles in degrees		
+	// convert rotation quaternion to Euler angles in degrees		
 	dPitch = atan2(2 * (y * z + w * x), w * w - x * x - y * y + z * z) / 3.141593 * 180.0;
 	dYaw = asin(2 * (w * y - x * z)) / 3.141593 * 180.0;
 	dRoll = atan2(2 * (x * y + w * z), w * w + x * x - y * y - z * z) / 3.141593 * 180.0;
@@ -2621,26 +2632,29 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     if (!strcmp("getBodies", cmd)) 
     {
         //Assign field names
-        const char *field_names[] = {"Position", "TrackingState",
+        const char *field_names[] = {"Position", "Orientation", "TrackingState",
                                 "LeftHandState","RightHandState"};                
         
-        
-        // And for the second output parameter
-        //plhs[1] = mxCreateNumericArray(1, numBodiesDim, mxINT32_CLASS, mxREAL);
-        //numBodies = (int*)mxGetPr(plhs[1]);
+        // Get input parameter: Quat or Euler angles for orientation
+        // 0 = Quaternion
+        // 1 = Euler angles
+        int *orientationType;
+        orientationType = (int*)mxGetData(prhs[2]);        
+
         
         // Call the class function
         std::vector<std::vector<Joint> > bodiesJoints;
+        std::vector<std::vector<JointOrientation> > bodiesJointsOrientations;
         std::vector<HandState> lhs;
         std::vector<HandState> rhs;
                 
-        Kin2_instance->getBodies(bodiesJoints,lhs,rhs);
+        Kin2_instance->getBodies(bodiesJoints,bodiesJointsOrientations,lhs,rhs);
         
         int bodiesSize = bodiesJoints.size();
         
         //Allocate memory for the structure
         mwSize dims[2] = {1, bodiesSize};
-        plhs[0] = mxCreateStructArray(2,dims,4,field_names);
+        plhs[0] = mxCreateStructArray(2,dims,5,field_names);
         
         // Copy number of bodies to output variable
         //numBodies[0] = (int)bodiesJoints.size();
@@ -2649,12 +2663,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         for(unsigned int i=0; i < bodiesJoints.size(); i++)
         {
             // output data
-            mxArray *position,*trackingState, *leftHandState, *rightHandState;
+            mxArray *position, *orientation, *trackingState, *leftHandState, *rightHandState;
             
             //Create mxArray data structures to hold the data
             //to be assigned for the structure.
             position  = mxCreateDoubleMatrix(3,25,mxREAL);
             double* posptr = (double*)mxGetPr(position);
+            if(*orientationType == 0) // if quaternion
+                orientation  = mxCreateDoubleMatrix(4,25,mxREAL);
+            else if(*orientationType == 1) // if Euler angles
+                orientation  = mxCreateDoubleMatrix(3,25,mxREAL);
+            
+            double* orientationptr = (double*)mxGetPr(orientation);
             int trackStateDim[2]={1,25};
             trackingState  = mxCreateNumericArray(2, trackStateDim, mxINT32_CLASS, mxREAL);
             int* trackStatePtr = (int*)mxGetPr(trackingState);
@@ -2664,8 +2684,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             int *lhsptr = (int*)mxGetPr(leftHandState);
             int *rhsptr = (int*)mxGetPr(rightHandState);
         
-            // Get next body
+            // Get next body joints
             std::vector<Joint> curBody = bodiesJoints[i];
+            // Get the body orientations
+            std::vector<JointOrientation> curOrientation = bodiesJointsOrientations[i];
             
             // For each joint
             for(int j=0; j<JointType_Count; j++)
@@ -2675,6 +2697,22 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 posptr[j*3 + 1] = curBody[j].Position.Y;
                 posptr[j*3 + 2] = curBody[j].Position.Z; 
                 
+                // Copy joints orientations to output matrix
+                if(*orientationType == 0) // if Quaternion
+                {
+                    orientationptr[j*4] = curOrientation[j].Orientation.x;
+                    orientationptr[j*4 + 1] = curOrientation[j].Orientation.y;
+                    orientationptr[j*4 + 2] = curOrientation[j].Orientation.z; 
+                    orientationptr[j*4 + 3] = curOrientation[j].Orientation.w; 
+                }
+                if(*orientationType == 1) // if Euler Angles
+                {
+                    double pitch, yaw, roll;
+                    extractRotationInDegrees(curOrientation[j].Orientation, pitch, yaw, roll);
+                    orientationptr[j*3] = pitch;
+                    orientationptr[j*3 + 1] = yaw;
+                    orientationptr[j*3 + 2] = roll; 
+                }
                 // Copy joints tracking state to output matrix
                 trackStatePtr[j] = curBody[j].TrackingState;
             }
@@ -2684,9 +2722,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                
             //Assign the output matrices to the struct
             mxSetFieldByNumber(plhs[0],i,0, position);
-            mxSetFieldByNumber(plhs[0],i,1, trackingState);
-            mxSetFieldByNumber(plhs[0],i,2, leftHandState);
-            mxSetFieldByNumber(plhs[0],i,3, rightHandState);
+            mxSetFieldByNumber(plhs[0],i,1, orientation);
+            mxSetFieldByNumber(plhs[0],i,2, trackingState);
+            mxSetFieldByNumber(plhs[0],i,3, leftHandState);
+            mxSetFieldByNumber(plhs[0],i,4, rightHandState);
         }
         
         return;
