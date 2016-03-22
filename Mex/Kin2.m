@@ -1,3 +1,18 @@
+% Kin2 Class
+% Kin2 provides access to Kinect V2 functionality using the Kinect For
+% Windows SDK 2.0
+%
+% See the demos for its usage.
+% See README.txt file for a brief description of each demo.
+% 
+% Authors:
+% Juan R. Terven, jrterven@hotmail.com
+% Diana M. Cordova, diana_mce@hotmail.com
+% 
+% Citation:
+% J. R. Terven, D. M. Cordova, "A Kinect 2 Toolbox for MATLAB", 
+% https://github.com/jrterven/Kin2, 2016.
+% 
 classdef Kin2 < handle
     %KIN2 MATLAB class wrapper to an underlying C++ Kin2 class
     properties (SetAccess = private, Hidden = true)
@@ -5,6 +20,15 @@ classdef Kin2 < handle
         
         % Bodies colors
         bodyColors = ['r','b','g','y','m','c'];
+        
+        % Selected sources
+        flag_depth = false;
+        flag_color = false;
+        flag_infrared = false;
+        flag_bodyIndex = false;
+        flag_body = false;
+        flag_face = false;
+        flag_hd_face = false;
     end
         
     properties (SetAccess = public)
@@ -60,11 +84,32 @@ classdef Kin2 < handle
         % Face Animation units
         faceAnimationUnits = cell(17,1);
         
-        % Color calibration
-        colorCalib = false;
-        colorFL = 1000; % focal length
-        colorPPX = 960; % ppx
-        colorPPY = 540; % ppy  
+        % Face Builder Collection Status
+        FaceModelBuilderCollectionStatus_Complete               = 0,
+        FaceModelBuilderCollectionStatus_MoreFramesNeeded       = 1,
+        FaceModelBuilderCollectionStatus_FrontViewFramesNeeded	= 2,
+        FaceModelBuilderCollectionStatus_LeftViewsNeeded        = 4,
+        FaceModelBuilderCollectionStatus_RightViewsNeeded       = 8,
+        FaceModelBuilderCollectionStatus_TiltedUpViewsNeeded	= 16
+        
+        % Face Builder Capture Status
+        FaceModelBuilderCaptureStatus_GoodFrameCapture	= 0,
+        FaceModelBuilderCaptureStatus_OtherViewsNeeded	= 1,
+        FaceModelBuilderCaptureStatus_LostFaceTrack     = 2,
+        FaceModelBuilderCaptureStatus_FaceTooFar        = 3,
+        FaceModelBuilderCaptureStatus_FaceTooNear       = 4,
+        FaceModelBuilderCaptureStatus_MovingTooFast     = 5,
+        FaceModelBuilderCaptureStatus_SystemError       = 6        
+        
+        % Color calibration initialization parameters
+        calibParams = struct;
+        colorCalib = false;     % Is color calibration already calculated?
+        colorFL = 1000;         % focal length
+        colorPPX = 960;         % ppx
+        colorPPY = 540;         % ppy  
+        colorRot = eye(3);      % rotation of color camera wrt depth camera
+        colorTranslation = [0 0 0]; % translation of color camera wrt depth
+        colork1 = 0; colork2 = 0; colork3 = 0; % radial distortion parameters
     end
     
     methods        
@@ -102,13 +147,13 @@ classdef Kin2 < handle
             
             
             % Get the flags
-            depth = ismember('depth',varargin);
-            color = ismember('color',varargin);
-            infrared = ismember('infrared',varargin);
-            bodyIndex = ismember('body_index',varargin);
-            body = ismember('body',varargin);
-            face = ismember('face',varargin);
-            hd_face = ismember('HDface',varargin);
+            this.flag_depth = ismember('depth',varargin);
+            this.flag_color = ismember('color',varargin);
+            this.flag_infrared = ismember('infrared',varargin);
+            this.flag_bodyIndex = ismember('body_index',varargin);
+            this.flag_body = ismember('body',varargin);
+            this.flag_face = ismember('face',varargin);
+            this.flag_hd_face = ismember('HDface',varargin);
             flags = uint16(0);
             
             % Extract flags values (from Kinect.h)
@@ -118,19 +163,20 @@ classdef Kin2 < handle
 %             FrameSourceTypes_Depth	= 0x8,
 %             FrameSourceTypes_BodyIndex	= 0x10,
 %             FrameSourceTypes_Body	= 0x20,
-            if color, flags = flags + 1; end
-            if infrared, flags = flags + 2; end
-            if depth, flags = flags + 8; end
-            if bodyIndex, flags = flags + 16; end
-            if body, flags = flags + 32; end    
-            if face, flags = flags + 128; end
-            if hd_face, flags = flags + 256; end
+            if this.flag_color, flags = flags + 1; end
+            if this.flag_infrared, flags = flags + 2; end
+            if this.flag_depth, flags = flags + 8; end
+            if this.flag_bodyIndex, flags = flags + 16; end
+            if this.flag_body, flags = flags + 32; end    
+            if this.flag_face, flags = flags + 128; end
+            if this.flag_hd_face, flags = flags + 256; end
+            
             this.objectHandle = Kin2_mex('new', flags);
         end
                 
         function delete(this)
             % Destructor - Destroy the C++ class instance
-            Kin2_mex('delete', this.objectHandle);
+            Kin2_mex('delete', this.objectHandle);            
         end
         
         %% video Sources        
@@ -171,10 +217,77 @@ classdef Kin2 < handle
         end
         
         function varargout = getPointCloud(this, varargin)
-            % getPointCloud - return nx3 camera space values from Kinect2. You must call
-            % updateData before and verify that there is valid data.
-            % See pointCloudDemo.m
-            [varargout{1:nargout}] = Kin2_mex('getPointCloud', this.objectHandle, varargin{:});
+            % getPointCloud - return an 217088nx3 point cloud or a MATLAB 
+            % built-in pointCloud object.
+            % Name-Value Pair Arguments: 
+            %   'output' - output format of the pointcloud
+            %       'raw'(default) | 'pointCloud'
+            %   The 'raw' output consists of an 217088nx3 points.
+            %   The 'pointCloud' output consist of a pointCloud object.
+            %   Note that this object was introduced with MATLAB 2015b.
+            %   Earlier versions will not support this type of output.
+            %
+            %   'color' - boolean value indicating if we want the colors of
+            %   each point of the point cloud. 
+            %       'false'(default) | 'true'
+            %   If 'color' is true and 'output' is 'raw', this method
+            %   returns two separate 217088nx3 matrices. One with the x,y,z
+            %   values of each point and the other with the R,G,B values of
+            %   each point.
+            %   If 'color' is true and 'output' is 'pointCloud', this
+            %   method return a pointCloud object with the color embedded.
+            %   Note that if 'color' is true, you must activate the color
+            %   camera on the Kin2 object creation. Otherwise it will
+            %   trigger a warning each time the method is called.
+            %
+            %   You must call updateData before and verify that there is valid data.
+            %   See pointCloudDemo.m and pointCloudDemo2.m
+            
+            % Parse inputs
+            p = inputParser;
+            defaultOutput = 'raw';
+            expectedOutputs = {'raw','pointCloud'};
+            defaultColor = 'false';
+            expectedColors = {'true','false'};
+            
+            addParameter(p,'output',defaultOutput,@(x) any(validatestring(x,expectedOutputs)));
+            addParameter(p,'color',defaultColor,@(x) any(validatestring(x,expectedColors)));
+            parse(p,varargin{:});
+            
+            % Required color?
+            if strcmp(p.Results.color,'true')
+                % If not color source selected, display a warning
+                if ~this.flag_color
+                    warning(['color source is not selected.' ...
+                        ' Please select the color source when creating Kin2 object.']);
+                    withColor = uint32(0);
+                else
+                    withColor = uint32(1);
+                end
+                
+            else
+                withColor = uint32(0);
+            end
+            
+            % Get the pointcloud from the Kinect V2 as a nx3 matrix
+            [varargout{1:2}] = Kin2_mex('getPointCloud', this.objectHandle, withColor);
+            
+            % If the required output is a pointCloud object,            
+            if strcmp(p.Results.output,'pointCloud')
+                % check if this version of MATLAB suppor the pointCloud object
+                if exist('pointCloud','class') ~= 8
+                    this.delete;
+                    error('This version of Matlab do not Support pointCloud object.')
+                % pointCloud object supported!
+                else
+                    % Convert nx3 matrix to pointCloud MATLAB object with colors
+                    if withColor == 1
+                        varargout{1} = pointCloud(varargout{1},'Color',varargout{2});
+                    else
+                        varargout{1} = pointCloud(varargout{1});
+                    end
+                end  
+            end                     
         end
         
         function varargout = getFaces(this, varargin)
@@ -214,13 +327,81 @@ classdef Kin2 < handle
             % - AnimationUnits: 17 animation units (AUs). Most of the AUs are 
             %   expressed as a numeric weight varying between 0 and 1.
             %   For details see https://msdn.microsoft.com/en-us/library/microsoft.kinect.face.faceshapeanimations.aspx
-            % - ShapeUnits: 94 hape units (SUs). Each SU is expressed as a 
-            %   numeric weight that typically varies between -2 and +2.
-            %   For details see https://msdn.microsoft.com/en-us/library/microsoft.kinect.face.faceshapedeformations.aspx
-            % - FaceModel: 3 x 1347 points of a 3D face model computed by face capture
-            % See faceHDDemo.m
-            [varargout{1:nargout}] = Kin2_mex('getHDFaces', this.objectHandle, varargin{:});
+            % - FaceModel (optional): 3 x 1347 points of a 3D face model computed by face capture
+            %   Use 'WithVertices','true' or 'false' to get the face model
+            %   or ignore the face model.
+            % See faceHDDemo.m                    
+            
+            % Required Vertices?
+            p = inputParser;
+            defaultOutput = 'true';
+            expectedOutputs = {'true','false'};
+            
+            addParameter(p,'WithVertices',defaultOutput,@(x) any(validatestring(x,expectedOutputs)));
+            parse(p,varargin{:});
+            
+            % Required HD vertices?
+            if strcmp(p.Results.WithVertices,'true')
+                withVertices = 1;
+            else
+                withVertices = 0;
+            end
+            
+            [varargout{1:nargout}] = Kin2_mex('getHDFaces', this.objectHandle, withVertices);
         end
+        
+        function modelReady = buildHDFaceModels(this, varargin)  
+            % buildHDFaceModels - Face captura capabilities of Kinect SDK 2.0
+            % Quoting High definition face tracking: 
+            % The API will tell a game developer where the person needs to be 
+            % in the camera view, the quality of the frames it captures, 
+            % and when it has enough valid frames will calculate the shape 
+            % of the user’s face and provide a game developer with those shape values. 
+            % The game developer can then use those values to influence 
+            % their game character design (e.g. make the player’s in-game character look more like the player).
+            %
+            % Name-Value Pair Arguments: 
+            % 'CollectionStatus' - display model collection status information
+            %       'true'(default) | 'false'
+            % 'CaptureStatus' - display model capture status information.
+            %       'false'(default) | 'true'
+            % See faceHDDemo2.m
+            
+            % Parse inputs
+            p = inputParser;
+            defaultCollectionStatus = 'true';
+            expectedCollectionStatus = {'true','false'};
+            defaultCaptureStatus = 'false';
+            expectedCaptureStatus = {'true','false'};
+
+            addParameter(p,'CollectionStatus',defaultCollectionStatus,@(x) any(validatestring(x,expectedCollectionStatus)));
+            addParameter(p,'CaptureStatus',defaultCaptureStatus,@(x) any(validatestring(x,expectedCaptureStatus)));
+            
+            parse(p,varargin{:});
+                       
+            % Call the C++ buildHDFaceModels
+            % This function returns two codes:
+            % A face model builder collection status (collStatus)
+            % A face model builder capture status (captureStatus)
+            [collStatus, captureStatus] = Kin2_mex('buildHDFaceModels', this.objectHandle, varargin{:});
+            
+             if strcmp(p.Results.CollectionStatus,'true')
+                 str = this.CollectionStatusCode2Str(collStatus);
+                 disp(str);
+             end
+             
+             if strcmp(p.Results.CaptureStatus,'true')
+                 str = this.CaptureStatusCode2Str(captureStatus);
+                disp(str);
+             end
+             
+              if collStatus == this.FaceModelBuilderCollectionStatus_Complete
+                  modelReady = true;
+              else
+                  modelReady = false;
+              end
+            
+        end                
         
         function varargout = getDepthIntrinsics(this, varargin)
             % getDepthIntrinsics - return the depth camera intrinsic
@@ -228,36 +409,80 @@ classdef Kin2 < handle
             % FocalLengthX, FocalLengthY, PrincipalPointX, PrincipalPointY,
             % RadialDistortionSecondOrder, RadialDistortionFourthOrder, 
             % RadialDistortionSixthOrder
+            %
             % Usage: You must call updateData before and verify that there is valid data.
             % See calibrationDemo.m
             [varargout{1:nargout}] = Kin2_mex('getDepthIntrinsics', this.objectHandle, varargin{:});
         end
         
-        function intrinsics = getColorIntrinsics(this, varargin)
+        function calibParams = getColorIntrinsics(this, varargin)
+            % getColorIntrinsics - return the color camera intrinsic and
+            % extrinsic parameters inside a structure containing:
+            % FocalLengthX, FocalLengthY, PrincipalPointX, PrincipalPointY,
+            % Rotation (wrt depth camera), Translation(wrt depth camera), 
+            % RadialDistortionSecondOrder, RadialDistortionFourthOrder, 
+            % RadialDistortionSixthOrder
+            %
+            % Usage: You must call updateData before and verify that there is valid data.
+            % See calibrationDemo.m
             if this.colorCalib
-                intrinsics = struct('FocalLengthX',this.colorFL, ...
-                    'FocalLengthY',this.colorFL,'PrincipalPointX',this.colorPPX, ...
-                    'PrincipalPointY',this.colorPPY);
+                calibParams = this.calibParams;
             else
+                disp('Auto-Calibrating Color Camera ...')
+                clear calibCostFun; % clear persistent variables of calibCostFun
                 % Get point cloud
                 pointcloud = this.getPointCloud;                        
                 proj2d = this.mapCameraPoints2Color(pointcloud);
+                rot = false;
+                if exist('quat2rotm')
+                    rot = true;
+                end
                 % Generates temporary file
-                save('calibData.mat','pointcloud','proj2d');
+                save('calibData.mat','pointcloud','proj2d','rot');
 
-                % Minimize cost function
-                x0 = [this.colorFL, this.colorPPX, this.colorPPY, 0,0,0,0,0,0];
+                % The rotation is expresend in quaternions (w,x,y,z)                
+                % Minimize cost function: f, ppx, ppy,
+                % w,x,y,z,tx,ty,tz,k1,k2,k3
+                x0 = [this.colorFL, this.colorPPX, this.colorPPY, 1,0,0,0,0,0,0,0,0,0];
                 options = optimset('Algorithm','levenberg-marquardt');
+                
                 x = fsolve('calibCostFun',x0,options);
                 this.colorFL = x(1);
                 this.colorPPX = x(2);
                 this.colorPPY = x(3);
-
-                intrinsics = struct('FocalLengthX',this.colorFL, ...
+                % rotation of color camera wrt depth camera
+                q = [x(4) x(5) x(6) x(7)];
+                % To convert from Quaternion to Rotation matrix we use quat2rotm
+                % introduced in MATLAB 2015a. If this function is not
+                % present, we return an identity rotation 
+                if exist('quat2rotm')                    
+                    this.colorRot = quat2rotm(q); 
+                else
+                    this.colorRot = eye(3);
+                end
+                
+                % translation of color camera wrt depth
+                this.colorTranslation = [x(8) x(9) x(10)]; 
+                
+                % radial distortion parameters
+                this.colork1 = x(11); this.colork2 = x(12); this.colork3 = x(13); 
+                
+                % build the output structure
+                this.calibParams = struct('FocalLengthX',this.colorFL, ...
                     'FocalLengthY',this.colorFL,'PrincipalPointX',this.colorPPX, ...
-                    'PrincipalPointY',this.colorPPY);
+                    'PrincipalPointY',this.colorPPY, 'Rotation', this.colorRot, ...
+                    'Translation', this.colorTranslation, ...
+                    'RadialDistortionSecondOrder',this.colork1, ...
+                    'RadialDistortionFourthOrder', this.colork2, ...
+                    'RadialDistortionSixthOrder', this.colork3);
+                
+                 calibParams = this.calibParams;
                     
-                 this.colorCalib = true;
+                 % color calibration is calculated only once. We use this
+                 % flag to keep track of this.
+                 this.colorCalib = true;    
+                 
+                 % Delete temporary files
                  delete('calibData.mat');
             end
         end
@@ -598,7 +823,6 @@ classdef Kin2 < handle
             % 4) displayText: display text information (animation units)?
             % 5) fontSize: text font size in pixels
             % See faceHDDemo.m
-            disp(nargin)
             if nargin < 6
                 fontSize = 20;
             end
@@ -668,6 +892,46 @@ classdef Kin2 < handle
                     viscircles(handle,colorCoords,ones(1347,1)*1,'EdgeColor',this.bodyColors(i));
                 end
 
+            end
+        end
+        
+        function str = CollectionStatusCode2Str(this,code)
+            switch(code)
+                case this.FaceModelBuilderCollectionStatus_Complete 
+                    str = 'Face model completed!';
+                case this.FaceModelBuilderCollectionStatus_MoreFramesNeeded 
+                    str = 'More frames needed';
+                case this.FaceModelBuilderCollectionStatus_FrontViewFramesNeeded 
+                    str = 'Frontal view frames needed';
+                case this.FaceModelBuilderCollectionStatus_LeftViewsNeeded 
+                    str = 'Left view frames needed';
+                case this.FaceModelBuilderCollectionStatus_RightViewsNeeded 
+                    str = 'Right view frames needed';
+                case this.FaceModelBuilderCollectionStatus_TiltedUpViewsNeeded 
+                    str = 'Tilted up view frames needed';    
+                otherwise
+                    str = '';
+            end
+        end
+        
+        function str = CaptureStatusCode2Str(this,code)
+            switch(code)
+                case this.FaceModelBuilderCaptureStatus_GoodFrameCapture 
+                    str = 'Good frame capture';
+                case this.FaceModelBuilderCaptureStatus_OtherViewsNeeded 
+                    str = 'Other views needed';
+                case this.FaceModelBuilderCaptureStatus_LostFaceTrack 
+                    str = 'Lost face track';
+                case this.FaceModelBuilderCaptureStatus_FaceTooFar 
+                    str = 'Face too far';
+                case this.FaceModelBuilderCaptureStatus_FaceTooNear 
+                    str = 'Face too near';
+                case this.FaceModelBuilderCaptureStatus_MovingTooFast 
+                    str = 'User moving too fast';    
+                case this.FaceModelBuilderCaptureStatus_SystemError 
+                    str = 'System Error!';    
+                otherwise
+                    str = '';
             end
         end
         

@@ -2,7 +2,7 @@
 ///		Kin2_mex.cpp
 ///
 ///		Description: 
-///			Kin2 class encapsulates the funtionality of Kinect2 Sensor.
+///			Kin2 class implementations.
 ///			Define methods to initialize, and get images from sensor.
 ///			It uses Kinect2 SDK from Microsoft.
 ///			Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -10,9 +10,9 @@
 ///		Usage:
 ///			Run demos
 ///
-///		Author: 
-///			Juan R. Terven.	jrterven@hotmail.com
-///         Diana M. Cordova, diana_mce@hotmail.com
+///		Authors: 
+///			Juan R. Terven
+///         Diana M. Cordova
 ///
 ///     Citation:
 ///     J. R. Terven, D. M. Cordova, "A Kinect 2 Toolbox for MATLAB", 
@@ -32,263 +32,17 @@
 ///         Jan/31/2016: HD Face processing
 ///         Mar/01/2016: Depth camera intrinsics
 ///         Mar/03/2016: Add Joints orientations
+///         Mar/09/2016: Add pointclouds with color and pointCloud MATLAB object
+///         Mar/15/2016: Add radial distortion to the color camera calibration
+///         Mar/18/2016: Fix HD face shape units
 ///////////////////////////////////////////////////////////////////////////
+#include "Kin2.h"
 #include "mex.h"
 #include "class_handle.hpp"
 #include <Kinect.h>
 #include <NuiKinectFusionApi.h>
 #include <Kinect.Face.h>
 #include <vector>
-
-#define SAFE_FUSION_RELEASE_IMAGE_FRAME(p) { if (p) { static_cast<void>(NuiFusionReleaseImageFrame(p)); (p)=NULL; } }
-#define SAFE_DELETE_ARRAY(p) { if (p) { delete[] (p); (p)=NULL; } }
-
-namespace k2
-{
-    // Sources of Kinect data. These are selected when creating the Kin2 object
-    enum{ 
-		COLOR = FrameSourceTypes::FrameSourceTypes_Color,
-		DEPTH = FrameSourceTypes::FrameSourceTypes_Depth,
-		INFRARED = FrameSourceTypes::FrameSourceTypes_Infrared,
-        BODY_INDEX = FrameSourceTypes::FrameSourceTypes_BodyIndex,
-		BODY = FrameSourceTypes::FrameSourceTypes_Body,
-		FACE = 0x80,
-        HD_FACE = 0x100
-    };
-    typedef unsigned short int Flags;
-    
-    // FaceData structure returned by the getFaces function
-    typedef struct _FaceData
-	{
-		RectI faceBox;
-		PointF facePoints[FacePointType::FacePointType_Count];
-		Vector4 faceRotation;
-		DetectionResult faceProperties[FaceProperty::FaceProperty_Count];
-	}FaceData;
-    
-    // HDFaceData structure returned by the getHDFaces function
-    typedef struct _HDFaceData
-	{
-		RectI faceBox;		
-		Vector4 faceRotation;
-		CameraSpacePoint headPivot;
-		float animationUnits[FaceShapeAnimations_Count];
-		float shapeUnits[FaceShapeDeformations_Count];
-		CameraSpacePoint faceModel[1347];
-
-	}HDFaceData;
-}
-
-/*********** Kin2 Class **********************/
-class Kin2
-{
-    static const int        cDepthWidth  = 512;     // depth image width
-    static const int        cDepthHeight = 424;     // depth image height
-    static const int        cInfraredWidth = 512;   // infrared image width
-	static const int        cInfraredHeight = 424;  // infrared image height
-    static const int        cColorWidth  = 1920;    // color image width
-    static const int        cColorHeight = 1080;    // color image height
-    static const int        cNumColorPix = cColorWidth*cColorHeight; // number of color pixels
-public:   
-    Kin2(UINT16 sources);   // Constructor    
-    ~Kin2();                // Destructor
-    
-    // Initialize Kinect2
-    void init();    
-    
-    /************ Video Sources *************/
-    void updateData(INT8 valid[]);
-    void getDepth(UINT16 depth[],bool& validDepth);
-    void getColor(unsigned char rgbImage[], bool& validColor);
-    void getInfrared(UINT16 infrared[],bool& validInfrared);
-    void getBodyIndex(BYTE bodyIndex[],bool& validBodyIndex);
-    
-    /************ Data Sources **************/
-    void getPointCloud(double pointCloud[], int size, bool& validData);
-    void getFaces(std::vector<k2::FaceData>& facesData);
-    void getHDFaces(std::vector<k2::HDFaceData>& facesData);
-    void getDepthIntrinsics(CameraIntrinsics &intrinsics);
-    
-    /************ Mappings **************/
-    void mapDepthPoints2Color(double depthCoords[], int size, UINT16 colorCoords[]);
-    void mapDepthPoints2Camera(double depthCoords[], int size, double cameraCoords[]);
-    bool mapDepthFrame2Color(ColorSpacePoint* depth2ColorMapping);
-
-	void mapColorPoints2Depth(double colorCoords[], int size, UINT16 depthCoords[]);
-    void mapColorPoints2Camera(double colorCoords[], int size, double cameraCoords[]);
-    
-    void mapCameraPoints2Depth(double cameraCoords[], int size, UINT16 depthCoords[]);
-    void mapCameraPoints2Color(double cameraCoords[], int size, UINT16 colorCoords[]);
-    
-    /************ Body Tracking *****************/
-    void getBodies(std::vector<std::vector<Joint> >& bodiesJoints,
-        std::vector<std::vector<JointOrientation> >& bodiesJointsOrientations,
-        std::vector<HandState>& lhs, std::vector<HandState>& rhs);
-    
-    /*************** Kinect Fusion***************/
-	void KF_init(int voxelsPerMeter = 64, int voxelsX = 256, int voxelsY = 256, int voxelsZ = 256, bool processorType = true, bool autoReset = true);
-	void KF_update();
-	void KF_getVolumeImage(BYTE volumeImg[]);
-	void KF_reset();
-	HRESULT KF_getMesh(INuiFusionMesh **ppMesh);
-        
-private:
-    // Current Kinect
-    IKinectSensor*          m_pKinectSensor;		// The Kinect sensor
-	ICoordinateMapper*      m_pCoordinateMapper;	// The coordinate mapper
-    
-    // Frame reader
-    IMultiSourceFrameReader* m_pMultiSourceFrameReader; // Kinect data reader
-
-	// Heap storage for images
-	UINT16*     m_pDepthArray16U;       // 16-bit depth image
-    UINT16*		m_pInfraredArray16U;    // 16-bit infrared image 
-	BYTE*       m_pColor;
-    BYTE*		m_pBodyIndex;
-    
-    // Heap storage for bodies
-	IBody*		m_ppBodies[BODY_COUNT];
-    bool		m_bHaveBodyData;
-    
-	// Face sources
-	IFaceFrameSource*       m_pFaceFrameSources[BODY_COUNT];
-
-	// Face readers
-	IFaceFrameReader*       m_pFaceFrameReaders[BODY_COUNT];
-    
-    // HD Face sources
-	IHighDefinitionFaceFrameSource* m_pHDFaceFrameSources[BODY_COUNT];
-
-	// HDFace readers
-	IHighDefinitionFaceFrameReader*	m_pHDFaceFrameReaders[BODY_COUNT];
-    
-    // HD face data
-    float*                  m_pAnimationUnits;
-    float*                  m_pShapeUnits;
-    CameraSpacePoint*       m_pFaceModelVertices;
-             
-    // Indicators of data available
-    bool        m_newDepthData;
-    bool        m_newColorData;
-    bool        m_newInfraredData;
-    bool        m_newBodyIndex;
-    bool        m_newPointCloudData;
-    
-    // Initialization flags
-    k2::Flags       m_flags;
-    
-    /************************************************************/
-	/******  Face Processing private variables and functions ******/
-	/************************************************************/
-    // Store faces data
-	std::vector<k2::FaceData> m_facesData;
-    std::vector<k2::HDFaceData> m_HDfacesData;
-
-	// define the face frame features required to be computed by this application
-	static const DWORD c_FaceFrameFeatures =
-		FaceFrameFeatures::FaceFrameFeatures_BoundingBoxInColorSpace
-		| FaceFrameFeatures::FaceFrameFeatures_PointsInColorSpace
-		| FaceFrameFeatures::FaceFrameFeatures_RotationOrientation
-		| FaceFrameFeatures::FaceFrameFeatures_Happy
-		| FaceFrameFeatures::FaceFrameFeatures_RightEyeClosed
-		| FaceFrameFeatures::FaceFrameFeatures_LeftEyeClosed
-		| FaceFrameFeatures::FaceFrameFeatures_MouthOpen
-		| FaceFrameFeatures::FaceFrameFeatures_MouthMoved
-		| FaceFrameFeatures::FaceFrameFeatures_LookingAway
-		| FaceFrameFeatures::FaceFrameFeatures_Glasses
-		| FaceFrameFeatures::FaceFrameFeatures_FaceEngagement;
-
-	void ProcessFaces();
-    void ProcessHDFaces();
-    
-    /************************************************************/
-	/******  Kinect Fusion private variables and functions ******/
-	/************************************************************/
-	static const int            cResetOnTimeStampSkippedMilliseconds = 1000;  // ms
-	static const int            cResetOnNumberOfLostFrames = 100;
-
-	/// Setup or update the Undistortion calculation for the connected camera
-	HRESULT		KF_SetupUndistortion();
-
-	
-	HRESULT		OnCoordinateMappingChanged();
-
-	/// Initialize Kinect Fusion volume and images for processing
-	HRESULT		KF_InitializeKinectFusion();
-
-	/// Handle new depth data
-	void		KF_ProcessDepth();
-
-	UINT		m_cDepthImagePixels;
-
-	/// The Kinect Fusion Reconstruction Volume
-	INuiFusionReconstruction*   m_pVolume;
-
-	/// The Kinect Fusion Volume Parameters
-	NUI_FUSION_RECONSTRUCTION_PARAMETERS m_reconstructionParams;
-
-	// The Kinect Fusion Camera Transform
-	Matrix4                     m_worldToCameraTransform;
-
-	// The default Kinect Fusion World to Volume Transform
-	Matrix4                     m_defaultWorldToVolumeTransform;
-
-	/// Frames from the depth input
-	UINT16*                     m_pDepthImagePixelBuffer;
-	NUI_FUSION_IMAGE_FRAME*     m_pDepthFloatImage;
-
-	/// For depth distortion correction
-	DepthSpacePoint*            m_pDepthDistortionMap;
-	UINT*                       m_pDepthDistortionLT;
-	WAITABLE_HANDLE             m_coordinateMappingChangedEvent;
-
-	/// Kinect camera parameters.
-	NUI_FUSION_CAMERA_PARAMETERS m_cameraParameters;
-	bool                        m_bHaveValidCameraParameters;
-
-	/// Frames generated from ray-casting the Reconstruction Volume
-	NUI_FUSION_IMAGE_FRAME*     m_pPointCloud;
-
-	/// Images for display
-	NUI_FUSION_IMAGE_FRAME*     m_pShadedSurface;
-
-	/// Camera Tracking parameters
-	int                         m_cLostFrameCounter;
-	bool                        m_bTrackingFailed;
-
-	bool                        m_bResetReconstruction;
-	/// Parameter to turn automatic reset of the reconstruction when camera tracking is lost on or off.
-	/// Set to true in the KF_init to enable auto reset on cResetOnNumberOfLostFrames lost frames,
-	/// or set false to never automatically reset.
-	bool                        m_bAutoResetReconstructionWhenLost;
-
-	/// Parameter to enable automatic reset of the reconstruction when there is a large
-	/// difference in timestamp between subsequent frames. This should usually be set true as 
-	/// default to enable recorded .xef files to generate a reconstruction reset on looping of
-	/// the playback or scrubbing, however, for debug purposes, it can be set false to prevent
-	/// automatic reset on timeouts.
-	bool                        m_bAutoResetReconstructionOnTimeout;
-
-	/// Processing parameters
-	int                         m_deviceIndex;
-	NUI_FUSION_RECONSTRUCTION_PROCESSOR_TYPE m_processorType;
-	bool                        m_bInitializeError;
-	float                       m_fMinDepthThreshold;
-	float                       m_fMaxDepthThreshold;
-	bool                        m_bMirrorDepthFrame;
-	unsigned short              m_cMaxIntegrationWeight;
-	int                         m_cFrameCounter;
-
-	/// Parameter to translate the reconstruction based on the minimum depth setting. When set to
-	/// false, the reconstruction volume +Z axis starts at the camera lens and extends into the scene.
-	/// Setting this true in the constructor will move the volume forward along +Z away from the
-	/// camera by the minimum depth threshold to enable capture of very small reconstruction volumes
-	/// by setting a non-identity camera transformation in the ResetReconstruction call.
-	/// Small volumes should be shifted, as the Kinect hardware has a minimum sensing limit of ~0.35m,
-	/// inside which no valid depth is returned, hence it is difficult to initialize and track robustly  
-	/// when the majority of a small volume is inside this distance.
-	bool                        m_bTranslateResetPoseByMinDepthThreshold;
-}; // Kin2 class
 
  // Constructor
 Kin2::Kin2(UINT16 sources):
@@ -304,9 +58,6 @@ Kin2::Kin2(UINT16 sources):
     m_bHaveBodyData(false),
     m_newBodyIndex(false),
     m_newPointCloudData(false),
-    m_pAnimationUnits(NULL),
-    m_pShapeUnits(NULL),
-    m_pFaceModelVertices(NULL),
     m_pVolume(nullptr),
     m_cDepthImagePixels(0),
     m_bMirrorDepthFrame(false),
@@ -336,10 +87,15 @@ Kin2::Kin2(UINT16 sources):
 	{
 		m_pFaceFrameSources[i] = nullptr;
 		m_pFaceFrameReaders[i] = nullptr;
-        m_pHDFaceFrameSources[i] = nullptr;
-		m_pHDFaceFrameReaders[i] = nullptr;
+		m_pHDFaceFrameSources[i] = nullptr;
+		m_pHDFaceFrameReaders[i] = nullptr;		
+		m_pFaceAlignment[i] = nullptr;
+		m_pFaceModel[i] = nullptr;		
+		m_pFaceModelBuilder[i] = nullptr;
+		m_faceModelReady[i] = false;
+		m_faceModelWarning[i] = false;
 	}
-    
+        
     // Initialize Kinect2
     init();
 } // end constructor
@@ -389,28 +145,14 @@ Kin2::~Kin2()
 	{
 		SafeRelease(m_pFaceFrameSources[i]);
 		SafeRelease(m_pFaceFrameReaders[i]);
-        SafeRelease(m_pHDFaceFrameSources[i]);
+		SafeRelease(m_pHDFaceFrameSources[i]);
 		SafeRelease(m_pHDFaceFrameReaders[i]);
+	
+		SafeRelease(m_pFaceAlignment[i]);
+		SafeRelease(m_pFaceModel[i]);
+
+		SafeRelease(m_pFaceModelBuilder[i]);
 	}
-    
-    if(m_pAnimationUnits)
-    {
-        delete[] m_pAnimationUnits;
-        m_pAnimationUnits = NULL;
-    }
-    
-    if(m_pShapeUnits)
-    {
-        delete[] m_pShapeUnits;
-        m_pShapeUnits = NULL;
-    }
-    
-    if(m_pFaceModelVertices)
-    {
-        delete[] m_pFaceModelVertices;
-        m_pFaceModelVertices = NULL;
-    }
-    
         
     // done with coordinate mapper
 	SafeRelease(m_pCoordinateMapper);
@@ -571,29 +313,58 @@ void Kin2::init()
 	}
     
     if (m_flags & k2::HD_FACE)
-	{
-        m_pAnimationUnits = new float[FaceShapeAnimations_Count]();
-        m_pShapeUnits = new float[FaceShapeDeformations_Count]();
-        m_pFaceModelVertices = new CameraSpacePoint[1347]();
-        
-		if (SUCCEEDED(hr))
-		{
-			// create a face frame source + reader to track each body in the fov
-			for (int i = 0; i < BODY_COUNT; i++)
-			{
-				if (SUCCEEDED(hr))
-				{
-					// create the face frame source by specifying the required face frame features
-					hr = CreateHighDefinitionFaceFrameSource(m_pKinectSensor, &m_pHDFaceFrameSources[i]);
-				}
-				if (SUCCEEDED(hr))
-				{
-					// open the corresponding reader
-					hr = m_pHDFaceFrameSources[i]->OpenReader(&m_pHDFaceFrameReaders[i]);
-				}
-			}
-		}
-	}
+	{        
+        // create a face frame source + reader to track each body in the fov
+        for (int i = 0; i < BODY_COUNT; i++)
+        {
+            // create the face frame source by specifying the required face frame features
+            hr = CreateHighDefinitionFaceFrameSource(m_pKinectSensor, &m_pHDFaceFrameSources[i]);
+
+            if (FAILED(hr))
+            {
+                mexPrintf("Error : CreateHighDefinitionFaceFrameSource()\n");
+                return;
+            }
+
+            // open the corresponding reader
+            hr = m_pHDFaceFrameSources[i]->OpenReader(&m_pHDFaceFrameReaders[i]);
+            if (FAILED(hr))
+            {
+                mexPrintf("Error : IHighDefinitionFaceFrameSource::OpenReader()\n");
+            }		
+
+            // Create Face Alignment
+            hr = CreateFaceAlignment(&m_pFaceAlignment[i]);
+            if (FAILED(hr))
+            {
+                mexPrintf("Error : CreateFaceAlignment()\n");
+            }
+
+            // Create base Face Models
+            float deformations[FaceShapeDeformations_Count] = { 0 };
+            hr = CreateFaceModel(1.0f, FaceShapeDeformations::FaceShapeDeformations_Count, deformations, &m_pFaceModel[i]);
+            if (FAILED(hr))
+            {
+                mexPrintf("Error : CreateFaceModel()\n");
+            }
+
+            // Open Face Model Builder
+            hr = m_pHDFaceFrameSources[i]->OpenModelBuilder(FaceModelBuilderAttributes::FaceModelBuilderAttributes_None, &m_pFaceModelBuilder[i]);
+            if (FAILED(hr))
+            {
+                mexPrintf("Error : IHighDefinitionFaceFrameSource::OpenModelBuilder()\n");
+                return;
+            }
+
+            // Start Collection Face Data
+            hr = m_pFaceModelBuilder[i]->BeginFaceDataCollection();
+            if (FAILED(hr))
+            {
+                mexPrintf("Error : IFaceModelBuilder::BeginFaceDataCollection()\n");
+                return;
+            }
+        } // for each body
+	} // if (m_flags & k2::HD_FACE)
 } // end init
 
 ///////// Function: updateData ///////////////////////////////////////////
@@ -603,7 +374,7 @@ void Kin2::updateData(INT8 valid[])
 {
     if (!m_pMultiSourceFrameReader)
     {
-        mexPrintf("No depth source initialized!\n");
+        mexPrintf("No Kinect Reader initialized!\n");
         return;
     }
     
@@ -745,7 +516,8 @@ void Kin2::updateData(INT8 valid[])
 			SafeRelease(pBodyFrameReference);
 		}
 	}
-    
+  
+  /*  
     // Get Face data
 	if (SUCCEEDED(hr))
 	{
@@ -763,7 +535,7 @@ void Kin2::updateData(INT8 valid[])
 			ProcessHDFaces();
 		}
 	}	
-    
+ */   
     if (SUCCEEDED(hr))
     {
         valid[0] = 1;
@@ -857,8 +629,8 @@ void Kin2::getBodyIndex(BYTE bodyIndex[],bool& validBodyIndex)
 // Get camera points from depth frame and copy them to Matlab matrix
 // You must call updateData first and have depth activated
 ///////////////////////////////////////////////////////////////////////////
-void Kin2::getPointCloud(double pointCloud[], int size, bool& validData)
-{
+void Kin2::getPointCloud(double pointCloud[], unsigned char colors[], int size, bool color, bool& validData)
+{   
     // Create coordinate mapping from depth to camera
 	HRESULT hr;
 	int numDepthPoints = size;
@@ -872,6 +644,46 @@ void Kin2::getPointCloud(double pointCloud[], int size, bool& validData)
 	
         if (SUCCEEDED(hr))
         {
+            // if the user want color
+            if(color)
+            {
+                // map camera points to color space
+                ColorSpacePoint* colorPoints = new ColorSpacePoint[numDepthPoints];
+                hr = m_pCoordinateMapper->MapCameraPointsToColorSpace(numDepthPoints, 
+                    cameraPoints, numDepthPoints, colorPoints);
+    
+                // fill up the colors matrix with R,G,B values from the current color image
+                if (SUCCEEDED(hr))
+                {		
+                    int colorCoordX, colorCoordY;
+                    for (int i = 0; i < numDepthPoints; i++)
+                    {                               
+                        colorCoordX = (UINT16)colorPoints[i].X;
+                        colorCoordY = (UINT16)colorPoints[i].Y;
+                        
+                        // Sample the RGB components from the color image
+                        unsigned char R, G, B;
+                        
+                        // first make sure the coordinates maps to a valid point in color space
+                        int colorX = (int)(floor(colorCoordX + 0.5));
+                        int colorY = (int)(floor(colorCoordY + 0.5));
+                        if ((colorX >= 0) && (colorX < cColorWidth) && (colorY >= 0) && (colorY < cColorHeight))
+                        {
+                            // calculate index into color array
+                            int colorIndex = (colorX + (colorY * cColorWidth)) * 4;
+                            
+                            R = m_pColor[colorIndex];
+                            G = m_pColor[colorIndex + 1];
+                            B = m_pColor[colorIndex + 2];
+                        }
+                        
+                        colors[i] = R;
+                        colors[i + size] = G;
+                        colors[i + size + size] = B;
+                    }
+                }    
+            } // if color
+            
             // Fill-up the point cloud with x,y,z values from camera space
             for (int i = 0; i < numDepthPoints; i++)
             {
@@ -1253,10 +1065,16 @@ void Kin2::getBodies(std::vector<std::vector<Joint> >& bodiesJoints,
 /***********************************************************************/
 /********************  Face Processing functions *************************/
 /***********************************************************************/
-void Kin2::ProcessFaces()
+void Kin2::getFaces(std::vector<k2::FaceData>& facesData)
 {
+    if (!(m_flags & k2::FACE))
+    {
+        mexPrintf("ERROR: NO FACE FUNCTIONALITY SELECTED!\n");
+        return;
+    }
+        
 	HRESULT hr;
-	m_facesData.clear();
+	facesData.clear();
 
 	// iterate through each face reader
 	for (int iFace = 0; iFace < BODY_COUNT; ++iFace)
@@ -1274,16 +1092,10 @@ void Kin2::ProcessFaces()
 
 		if (SUCCEEDED(hr))
 		{
-			// If face tracked, save its data on the m_facesData structure array
+			// If face tracked, save its data on the facesData structure array
 			if (bFaceTracked)
 			{
 				IFaceFrameResult* pFaceFrameResult = nullptr;
-				//RectI faceBox = { 0 };
-				//PointF facePoints[FacePointType::FacePointType_Count];
-				//Vector4 faceRotation;
-				//DetectionResult faceProperties[FaceProperty::FaceProperty_Count];
-				//D2D1_POINT_2F faceTextLayout;
-
 				hr = pFaceFrame->get_FaceFrameResult(&pFaceFrameResult);
 
 				k2::FaceData faceData;
@@ -1308,7 +1120,7 @@ void Kin2::ProcessFaces()
 						hr = pFaceFrameResult->GetFaceProperties(FaceProperty::FaceProperty_Count, faceData.faceProperties);
 					}
 
-					m_facesData.push_back(faceData);
+					facesData.push_back(faceData);
 				}
 
 				SafeRelease(pFaceFrameResult);
@@ -1347,122 +1159,107 @@ void Kin2::ProcessFaces()
 	}
 }
 
-void Kin2::getFaces(std::vector<k2::FaceData>& facesData)
-{
-	facesData = m_facesData;
-}
 
-void Kin2::ProcessHDFaces()
+void Kin2::getHDFaces(bool withVertices, std::vector<k2::HDFaceData>& facesData)
 {
+    if (!(m_flags & k2::HD_FACE))
+	{
+        mexPrintf("ERROR: NO HD-FACE FUNCTIONALITY SELECTED!\n");
+        return;
+    }
+        
 	HRESULT hr;
-	m_HDfacesData.clear();
+	facesData.clear();
 
 	// iterate through each HD face reader
 	for (int iFace = 0; iFace < BODY_COUNT; ++iFace)
 	{
 		// retrieve the latest face frame from this reader
-		IHighDefinitionFaceFrame * pHDFaceFrame = nullptr;
+		IHighDefinitionFaceFrame *pHDFaceFrame = nullptr;
 		
 		hr = m_pHDFaceFrameReaders[iFace]->AcquireLatestFrame(&pHDFaceFrame);
-
-		//std::cout << "HD Face frame acquired\n";
 
 		BOOLEAN bFaceTracked = false;
 		if (SUCCEEDED(hr) && nullptr != pHDFaceFrame)
 		{
 			// check if a valid face is tracked in this face frame
 			hr = pHDFaceFrame->get_IsTrackingIdValid(&bFaceTracked);
-
-			//std::cout << "HD Face tracking valid\n";
 		}
 
-		// If face tracked, save its data on the m_facesData structure array
+		// If face tracked, save its data on the facesData structure array
 		if (bFaceTracked)
-		{
-			//std::cout << "HD Face: " << iFace << " is tracked\n";				
-			
-			IFaceAlignment* pFaceAlignment = nullptr;
-			hr = CreateFaceAlignment(&pFaceAlignment);			
-			//UINT32 vertexCount;
-			IFaceModel *pFaceModel = nullptr;
-			
-			// Here we save the HD face data
+		{		
+            float animationUnits[FaceShapeAnimations_Count]={0};					
+			UINT32 vertexCount;
+            
+            // Here we save the HD face data
 			k2::HDFaceData faceData;
+            
+			hr = pHDFaceFrame->GetAndRefreshFaceAlignmentResult(m_pFaceAlignment[iFace]);
 
-			if (SUCCEEDED(hr))
-				hr = pHDFaceFrame->GetAndRefreshFaceAlignmentResult(pFaceAlignment);
+            if (SUCCEEDED(hr) && m_pFaceAlignment[iFace] != nullptr)
+			{	
+                // Get the Animation units
+                hr = m_pFaceAlignment[iFace]->GetAnimationUnits(FaceShapeAnimations_Count, animationUnits);
 
-			// Get the Animation units
-			if (SUCCEEDED(hr))
-				hr = pFaceAlignment->GetAnimationUnits(FaceShapeAnimations_Count, m_pAnimationUnits);
+                if (SUCCEEDED(hr))
+                {
+                    for (int vi = 0; vi < FaceShapeAnimations_Count; vi++)
+                        faceData.animationUnits[vi] = animationUnits[vi];
+                }
 
-			if (SUCCEEDED(hr))
-			{
-				for (int vi = 0; vi < FaceShapeAnimations_Count; vi++)
-					faceData.animationUnits[vi] = m_pAnimationUnits[vi];
-			}
+                // If HD face model vertices are requested
+				if (withVertices)
+				{
+                    hr = GetFaceModelVertexCount(&vertexCount);
+                    //mexPrintf("Number of Vertices: %d", vertexCount);
 
-			// Get the face model
-			if (SUCCEEDED(hr))
-			{
-				hr = CreateFaceModel(1, FaceShapeDeformations_Count, m_pShapeUnits, &pFaceModel);					
+					// If there is no model ready, issue a warning message (just once)
+					if (!m_faceModelReady[iFace] && !m_faceModelWarning[iFace])
+					{
+						mexPrintf("WARNING: No personal model has been created. An average face model will be used\n");
+						m_faceModelWarning[iFace] = true;
+					}
+                    
+                    CameraSpacePoint *vertices = new CameraSpacePoint[vertexCount];
 
-				//GetFaceModelVertexCount(&vertexCount);
-				//vertices = new CameraSpacePoint[vertexCount];
-			}
+					// Get the vertices (HD points)
+					if (SUCCEEDED(hr))
+						hr = m_pFaceModel[iFace]->CalculateVerticesForAlignment(m_pFaceAlignment[iFace], vertexCount, vertices);
 
-			if (SUCCEEDED(hr))
-				hr = pFaceModel->CalculateVerticesForAlignment(pFaceAlignment, 1347, m_pFaceModelVertices);
+					if (SUCCEEDED(hr))
+                    {
+						faceData.faceModel.resize(vertexCount);
 
-			if (SUCCEEDED(hr))
-			{
-				for (int vi = 0; vi < 1347; vi++)
-					faceData.faceModel[vi] = m_pFaceModelVertices[vi];
-			}
+						for (int vi = 0; vi < vertexCount; vi++)
+							faceData.faceModel[vi] = vertices[vi];
+					}
 
-			// Get the shape units 
-			if (SUCCEEDED(hr))
-				hr = pFaceModel->GetFaceShapeDeformations(FaceShapeDeformations_Count, m_pShapeUnits);
-
-			if (SUCCEEDED(hr))
-			for (int vi = 0; vi < FaceShapeDeformations_Count; vi++)
-				faceData.shapeUnits[vi] = m_pShapeUnits[vi];
+					if (vertices)
+					{
+						delete[] vertices;
+						vertices = NULL;
+					}
+                } // if withVertices	
 				
-			// Get the facebox
-			if (SUCCEEDED(hr))
-				hr = pFaceAlignment->get_FaceBoundingBox(&faceData.faceBox);
+                // Get the facebox
+                if (SUCCEEDED(hr))
+                    hr = m_pFaceAlignment[iFace]->get_FaceBoundingBox(&faceData.faceBox);
 
-			// Get the face rotation
-			if (SUCCEEDED(hr))
-				hr = pFaceAlignment->get_FaceOrientation(&faceData.faceRotation);
+                // Get the face rotation
+                if (SUCCEEDED(hr))
+                    hr = m_pFaceAlignment[iFace]->get_FaceOrientation(&faceData.faceRotation);
 
-			// Get the head pivot
-			if (SUCCEEDED(hr))
-			{
-				hr = pFaceAlignment->get_HeadPivotPoint(&faceData.headPivot);
-			}
-				
-			// Save the HD face data in the member variable m_HDfacesData
-			m_HDfacesData.push_back(faceData);
-			SafeRelease(pFaceAlignment);
-			SafeRelease(pFaceModel);
+                // Get the head pivot
+                if (SUCCEEDED(hr))
+                {
+                    hr = m_pFaceAlignment[iFace]->get_HeadPivotPoint(&faceData.headPivot);
+                }
 
-			/*if (pDeformations)
-			{
-				delete[] pDeformations;
-				pDeformations = NULL;
-			}
-			if (pAnimationUnits)
-			{
-				delete[] pAnimationUnits;
-				pAnimationUnits = NULL;
-			}
-			if (vertices)
-			{
-				delete[] vertices;
-				vertices = NULL;
-			}*/
-		}
+                // Save the HD face data in the member variable m_HDfacesData
+                facesData.push_back(faceData);			
+            }  // if face alignment	
+        } // If face tracked
 		else
 		{
 			// face tracking is not valid - attempt to fix the issue
@@ -1488,19 +1285,186 @@ void Kin2::ProcessHDFaces()
 							m_pHDFaceFrameSources[iFace]->put_TrackingId(bodyTId);
 						}
 					}
-				}
-			}
+				} // if (pBody != nullptr)
+			} // if (m_bHaveBodyData)
+		} // if face tracked
+
+		SafeRelease(pHDFaceFrame);		
+	} // for each face reader
+} // end getHDFaces function
+
+void Kin2::buildHDFaceModels(int &collectionStatus, int &captureStatus)
+{
+    collectionStatus = -1;
+    captureStatus = -1;
+    
+	if (!(m_flags & k2::HD_FACE))
+	{
+        mexPrintf("ERROR: NO HD-FACE FUNCTIONALITY SELECTED!\n");
+        return;
+    }
+    
+	HRESULT hr;
+
+	// iterate through each HD face reader
+	for (int iFace = 0; iFace < BODY_COUNT; ++iFace)
+	{
+		// retrieve the latest face frame from this reader
+		IHighDefinitionFaceFrame *pHDFaceFrame = nullptr;
+
+		hr = m_pHDFaceFrameReaders[iFace]->AcquireLatestFrame(&pHDFaceFrame);
+
+		BOOLEAN bFaceTracked = false;
+		if (SUCCEEDED(hr) && nullptr != pHDFaceFrame)
+		{
+			// check if a valid face is tracked in this face frame
+			hr = pHDFaceFrame->get_IsTrackingIdValid(&bFaceTracked);
 		}
 
-		SafeRelease(pHDFaceFrame);
-		
-	}
-}
+		// If face tracked, try to align it
+		if (SUCCEEDED(hr) && bFaceTracked)
+		{
+			IFaceModel *pFaceModel = nullptr;
 
-void Kin2::getHDFaces(std::vector<k2::HDFaceData>& facesData)
-{
-	facesData = m_HDfacesData;
-}
+			hr = pHDFaceFrame->GetAndRefreshFaceAlignmentResult(m_pFaceAlignment[iFace]);
+
+			// If face aligned, continue building the model
+			if (SUCCEEDED(hr) && m_pFaceAlignment[iFace] != nullptr)
+			{
+				// If face model not ready
+				if (!m_faceModelReady[iFace])
+				{
+					FaceModelBuilderCollectionStatus collection;
+					hr = m_pFaceModelBuilder[iFace]->get_CollectionStatus(&collection);
+                    collectionStatus = (int)collection;
+
+					// If model completed
+					if (collection == FaceModelBuilderCollectionStatus::FaceModelBuilderCollectionStatus_Complete)
+					{
+						mexPrintf("Face Model Completed!\n");						
+
+						IFaceModelData* pFaceModelData = nullptr;
+						hr = m_pFaceModelBuilder[iFace]->GetFaceData(&pFaceModelData);
+
+						// Produce the model
+						if (SUCCEEDED(hr) && pFaceModelData != nullptr)
+						{
+                            mexPrintf("Producing model...\n");
+							hr = pFaceModelData->ProduceFaceModel(&m_pFaceModel[iFace]);
+                            mexPrintf("Model Ready!\n");
+
+							// Set the model ready flag
+							if (SUCCEEDED(hr) && m_pFaceModel[iFace] != nullptr)
+							{
+								m_faceModelReady[iFace] = true;
+							}
+						}
+						SafeRelease(pFaceModelData);
+
+						// Get the shape units (SU) i.e. the deformations wrt the base face model
+                        /*
+						if (SUCCEEDED(hr))
+						{
+							float deformations[FaceShapeDeformations_Count];
+							hr = m_pFaceModel[iFace]->GetFaceShapeDeformations(FaceShapeDeformations_Count, deformations);										
+						}
+                        */
+					}
+					// if model not completed yet
+					else
+					{
+						// Display Collection Status
+                        /*
+						if (collection >= FaceModelBuilderCollectionStatus::FaceModelBuilderCollectionStatus_TiltedUpViewsNeeded)
+						{
+							mexPrintf("Need : Tilted Up Views\n");							
+						}
+
+
+						else if (collection >= FaceModelBuilderCollectionStatus::FaceModelBuilderCollectionStatus_RightViewsNeeded)
+						{
+							mexPrintf("Need : Right Views\n");							
+						}
+
+						else if (collection >= FaceModelBuilderCollectionStatus::FaceModelBuilderCollectionStatus_LeftViewsNeeded)
+						{
+							mexPrintf("Need : Left Views\n");							
+						}
+
+						else if (collection >= FaceModelBuilderCollectionStatus::FaceModelBuilderCollectionStatus_FrontViewFramesNeeded)
+						{
+							mexPrintf("Need : Front ViewFrames\n");							
+						}
+                        */ 
+
+						// Display Capture Status
+						FaceModelBuilderCaptureStatus capture;
+						hr = m_pFaceModelBuilder[iFace]->get_CaptureStatus(&capture);
+
+                        captureStatus = (int)capture;
+                        
+                        /*
+						switch (capture)
+						{
+						case FaceModelBuilderCaptureStatus::FaceModelBuilderCaptureStatus_OtherViewsNeeded:
+							std::cout << "Other views needed" << std::endl;
+							break;
+						case FaceModelBuilderCaptureStatus::FaceModelBuilderCaptureStatus_FaceTooFar:
+							std::cout << "Face Too Far from Camera" << std::endl;
+							break;
+						case FaceModelBuilderCaptureStatus::FaceModelBuilderCaptureStatus_FaceTooNear:
+							std::cout << "Face Too Near to Camera" << std::endl;
+							break;
+						case FaceModelBuilderCaptureStatus_MovingTooFast:
+							std::cout << "Moving Too Fast" << std::endl;
+							break;
+						case FaceModelBuilderCaptureStatus::FaceModelBuilderCaptureStatus_LostFaceTrack:
+							std::cout << "Lost Face Track" << std::endl;
+							break;
+						case FaceModelBuilderCaptureStatus::FaceModelBuilderCaptureStatus_SystemError:
+							std::cout << "ERROR: System Error" << std::endl;
+							break;
+
+						default:
+							break;
+						}
+                         */
+					} // collection not complete
+				} // If face model not ready
+			} // If face aligned
+		} // If face tracked
+		else
+		{
+			// face tracking is not valid - attempt to fix the issue
+			// a valid body is required to perform this step
+			if (m_bHaveBodyData)
+			{
+				// check if the corresponding body is tracked 
+				// if this is true then update the face frame source to track this body
+				IBody* pBody = m_ppBodies[iFace];
+				if (pBody != nullptr)
+				{
+					BOOLEAN bTracked = false;
+					hr = pBody->get_IsTracked(&bTracked);
+
+					UINT64 bodyTId;
+					if (SUCCEEDED(hr) && bTracked)
+					{
+						// get the tracking ID of this body
+						hr = pBody->get_TrackingId(&bodyTId);
+						if (SUCCEEDED(hr))
+						{
+							// update the face frame source with the tracking ID
+							m_pHDFaceFrameSources[iFace]->put_TrackingId(bodyTId);
+						}
+					}
+				} // if (pBody != nullptr)
+			} // if (m_bHaveBodyData)
+		} // if face tracked
+	}// for each face reader
+
+} // end buildHDFaceModels
+
 
 void Kin2::getDepthIntrinsics(CameraIntrinsics &intrinsics)
 {
@@ -2319,29 +2283,44 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int depthWidth  = 512;
         int depthHeight = 424;
         
-         // Prepare output array
+        // Get input parameter:
+        // 0 = no color
+        // 1 = with color
+        int *withColor;
+        bool bwithColor = false;
+        withColor = (int*)mxGetData(prhs[2]);
+        if(*withColor == 0)
+            bwithColor = false;
+        else
+            bwithColor = true;
+                
+        // Prepare output arrays
         double *pointCloud;   // pointer to output data
+        unsigned char *colors;
         int size = depthWidth * depthHeight;
         int outDim[2]={size,3};    // three values (row vector)
         
          // Reserve space for output array
         plhs[0] = mxCreateNumericArray(2, outDim, mxDOUBLE_CLASS, mxREAL); 
+        plhs[1] = mxCreateNumericArray(2, outDim, mxUINT8_CLASS, mxREAL);
         
         // Assign pointers to the output parameters
-        pointCloud = (double*)mxGetPr(plhs[0]);     
-        
-        int invalidData[3] = {0,0,0};
-         
+        pointCloud = (double*)mxGetPr(plhs[0]);   
+        colors = (unsigned char*)mxGetPr(plhs[1]);
+                
         // Check parameters
         if (nlhs < 0 || nrhs < 2)
             mexErrMsgTxt("getPointCloud: Unexpected arguments.");
       
         // Call the class function
         bool validData;
-        Kin2_instance->getPointCloud(pointCloud,size,validData);
+        Kin2_instance->getPointCloud(pointCloud,colors,size, bwithColor, validData);
         
         if(!validData)
-            plhs[0] = mxCreateNumericArray(2, invalidData, mxDOUBLE_CLASS, mxREAL);
+        {
+            plhs[0] = mxCreateNumericArray(2, outDim, mxDOUBLE_CLASS, mxREAL); 
+            plhs[1] = mxCreateNumericArray(2, outDim, mxUINT8_CLASS, mxREAL);
+        }
         
         return;
  
@@ -2812,25 +2791,32 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     // getHDFaces method
     if (!strcmp("getHDFaces", cmd)) 
     {
+        // Get input parameters
+        int wVertices;  
+        wVertices = (int)mxGetScalar(prhs[2]); 
+        
         //Assign field names
         const char *field_names[] = {"FaceBox", "FaceRotation",
-                                "HeadPivot","AnimationUnits","ShapeUnits","FaceModel"};  
+                                "HeadPivot","AnimationUnits","FaceModel"};  
                                 
         std::vector<k2::HDFaceData> facesData;
         
         // call the class method
-        Kin2_instance->getHDFaces(facesData);
+        bool withVertices = false;                
+        if(wVertices) withVertices = true;
+        
+        Kin2_instance->getHDFaces(withVertices, facesData);
         
         //Allocate memory for the structure
         mwSize dims[2] = {1, facesData.size()};
-        plhs[0] = mxCreateStructArray(2,dims,6,field_names);
+        plhs[0] = mxCreateStructArray(2,dims,5,field_names);
         
         // Copy the faces data to the output matrices
         for(unsigned int i=0; i < facesData.size(); i++)
         {
             // output data
             mxArray *faceBox, *faceRotation, *headPivot, *animationUnits;
-            mxArray *shapeUnits, *faceModel;
+            mxArray *faceModel;
             
             //Create mxArray data structures to hold the data
             //to be assigned for the structure.
@@ -2844,12 +2830,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             double* headPivotPtr = (double*)mxGetPr(headPivot);
             
             animationUnits  = mxCreateDoubleMatrix(1,FaceShapeAnimations_Count,mxREAL);
-            double* animationUnitsPtr = (double*)mxGetPr(animationUnits);
+            double* animationUnitsPtr = (double*)mxGetPr(animationUnits);            
             
-            shapeUnits  = mxCreateDoubleMatrix(1,FaceShapeDeformations_Count,mxREAL);
-            double* shapeUnitsPtr = (double*)mxGetPr(shapeUnits);
-            
-            faceModel  = mxCreateDoubleMatrix(3,1347,mxREAL);
+            int numVertices = facesData[0].faceModel.size();
+            faceModel  = mxCreateDoubleMatrix(3,numVertices,mxREAL);
             double* faceModelPtr = (double*)mxGetPr(faceModel);
   
             // Get next face
@@ -2875,14 +2859,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             
             // Get animation units
             for(int j=0; j<FaceShapeAnimations_Count; j++)
-                animationUnitsPtr[j] = curFace.animationUnits[j];
-            
-            // Get shape units
-            for(int j=0; j<FaceShapeDeformations_Count; j++)
-                shapeUnitsPtr[j] = curFace.shapeUnits[j];
+                animationUnitsPtr[j] = curFace.animationUnits[j];            
             
             // Get face points
-            for(int j=0; j<1347; j++)
+            for(int j=0; j<numVertices; j++)
             {               
                 // Copy joints position to output matrix 
                 faceModelPtr[j*3] = curFace.faceModel[j].X;
@@ -2895,10 +2875,32 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mxSetFieldByNumber(plhs[0],i,1, faceRotation);
             mxSetFieldByNumber(plhs[0],i,2, headPivot);
             mxSetFieldByNumber(plhs[0],i,3, animationUnits);
-            mxSetFieldByNumber(plhs[0],i,4, shapeUnits);
-            mxSetFieldByNumber(plhs[0],i,5, faceModel);
+            mxSetFieldByNumber(plhs[0],i,4, faceModel);
         }
                 
+        return;
+    }
+    
+    // buildHDFaceModels method
+    if (!strcmp("buildHDFaceModels", cmd)) 
+    {
+        // Create a 1-by-1 real integer
+        plhs[0] = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);
+        plhs[1] = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);
+    
+        int collectionStatus, captureStatus;
+        Kin2_instance->buildHDFaceModels(collectionStatus, captureStatus);
+        
+        //mexPrintf("Collection Status: %d\n",collectionStatus);
+        //mexPrintf("Capture Status: %d",captureStatus);
+        
+        // fill the output parameters
+        int *outCollStatus = (int *) mxGetData(plhs[0]);
+        outCollStatus[0] = collectionStatus;
+        
+        int *outCapStatus = (int *) mxGetData(plhs[1]);
+        outCapStatus[0] = captureStatus;       
+        
         return;
     }
     
@@ -2909,7 +2911,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         int voxelsX, voxelsY, voxelsZ;
         bool processorType;
         
-        mexPrintf("nrhs:%d\n",nrhs);
+        //mexPrintf("nrhs:%d\n",nrhs);
         if(nrhs > 2)
         {        
             // Get voxels per meter input parameter            

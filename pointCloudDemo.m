@@ -16,15 +16,14 @@ close all
 % Select sources as input parameters.
 % Available sources: 'color', 'depth', 'infrared', 'body_index', 'body',
 % 'face' and 'HDface'
-k2 = Kin2('depth');
+k2 = Kin2('color', 'depth');
 
 % images sizes
 depth_width = 512; depth_height = 424; outOfRange = 4000;
 
-
 % Create matrices for the images
 depth = zeros(depth_height,depth_width,'uint16');
-pointCloud = zeros(depth_height*depth_width,3);
+pc = zeros(depth_height*depth_width,3);
 
 % depth stream figure
 figure, h1 = imshow(depth,[0 outOfRange]);
@@ -34,16 +33,15 @@ colorbar
 set(gcf,'keypress','k=get(gcf,''currentchar'');'); % listen keypress
 
 % point cloud figure
-figure, hpc = plot3(pointCloud(:,1),pointCloud(:,2),pointCloud(:,3),'.');
-title('Point Cloud (press q to exit)')
-axis([-3 3 -3 3 0 4])
-xlabel('X'), ylabel('Y'), zlabel('Z');
+figure
+pcax = axes;
 set(gcf,'keypress','k=get(gcf,''currentchar'');'); % listen keypress
 
 % Loop until pressing 'q' on any figure
 k=[];
 
 disp('Press q on any figure to exit')
+downsample = 2; % subsample pointcloud
 while true
     % Get frames from Kinect and save them on underlying buffer
     validData = k2.updateData;
@@ -58,8 +56,13 @@ while true
         depth(depth>outOfRange) = outOfRange; % truncate depht
         set(h1,'CData',depth); 
         
-        pointCloud = k2.getPointCloud;
-        set(hpc,'XData',pointCloud(:,1),'YData',pointCloud(:,2),'ZData',pointCloud(:,3));
+        % Obtain the point cloud with color
+        [pc, pcColors] = k2.getPointCloud('output','raw','color','true');
+        pcColors = double(pcColors)/255.0;
+        scatter3(pcax,pc(:,1),pc(:,2),pc(:,3),6,pcColors,'Marker','.');
+        axis(pcax,[-3 3 -3 3 0 4])
+        xlabel(pcax,'X'), ylabel(pcax,'Y'), zlabel(pcax,'Z');
+        view(pcax,180,-90)
 
     end
     
@@ -78,4 +81,4 @@ end
 % Close kinect object
 k2.delete;
 
-close all;
+%close all;

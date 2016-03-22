@@ -48,7 +48,11 @@ set(gcf,'keypress','k=get(gcf,''currentchar'');'); % listen keypress
 % Loop until pressing 'q' on any figure
 k=[];
 
+disp(' '); disp('Usage:');
+disp('Press d to obtain depth camera intrinsic parameters')
+disp('Press c to calibrate color camera')
 disp('Press q on any figure to exit')
+
 while true
     % Get frames from Kinect and save them on underlying buffer
     validData = k2.updateData;
@@ -90,11 +94,18 @@ while true
         elseif strcmp(k,'c')
             calib = k2.getColorIntrinsics;
             disp(' ');
-            disp('------------ Color Intrinsics ------------')
+            disp('------------ Color Camera Parameters ------------')
             disp(['Focal Length X: ' num2str(calib.FocalLengthX)]);
             disp(['Focal Length Y: ' num2str(calib.FocalLengthY)]);
             disp(['Principal Point X: ' num2str(calib.PrincipalPointX)]);
             disp(['Principal Point Y: ' num2str(calib.PrincipalPointY)]);
+            disp('Rotation Wrt Depth camera:');
+            disp(num2str(calib.Rotation));
+            disp(['Translation x,y,z wrt depth camera(meters): ' num2str(calib.Translation)]);
+            disp(['Radial Distortion 2nd order: ' num2str(calib.RadialDistortionSecondOrder)]);
+            disp(['Radial Distortion 4th order: ' num2str(calib.RadialDistortionFourthOrder)]);
+            disp(['Radial Distortion 6th order: ' num2str(calib.RadialDistortionSixthOrder)]);
+            disp('--------------------------------------------');
             k = [];
         end;
     

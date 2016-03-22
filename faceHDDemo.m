@@ -78,7 +78,7 @@ while true
         %   numeric weight that typically varies between -2 and +2.
         %   For details see https://msdn.microsoft.com/en-us/library/microsoft.kinect.face.faceshapedeformations.aspx
         % - FaceModel: 3 x 1347 points of a 3D face model computed by face capture
-        faces = k2.getHDFaces;                    
+        faces = k2.getHDFaces('WithVertices','true');                    
 
         % Display the HD faces data and face model(1347 points):
         % Parameters: 
@@ -93,6 +93,7 @@ while true
         if size(faces,2) > 0
              model = faces(1).FaceModel;
              set(hmodel,'XData',model(1,:),'YData',model(2,:),'ZData',model(3,:));
+             view(0,90)
          end
     end
     
@@ -107,4 +108,4 @@ end
 % Close kinect object
 k2.delete;
 
-close all;
+%close all;
