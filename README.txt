@@ -3,7 +3,8 @@ C++ wrapper functions for the Microsoft Kinect 2, using Microsoft SDK.
 Requirements:
 - Kinect2 SDK. http://www.microsoft.com/en-us/download/details.aspx?id=44561
 - Visual Studio 2012 or newer compiler
-- Matlab 2013a or newer (for Visual Studio 2012 support)
+- MATLAB 2013a or newer (for Visual Studio 2012 support)
+- MATLAB 2015b or newer for pointCloudDemo2, which uses MATLAB's built-in pointCloud object
 
 Usage:
 1) Set the compiler using mex -setup C++
@@ -18,9 +19,11 @@ Demos:
 2) mappingDemo.m: displays depth and color video, and allows to map points from one image to the other (See usage comments at the beginning of the script).
 3) mapping2CamDemo.m: displays depth and color and allows to map points from depth and color to camera space and viceversa.
 4) bodyDemo.m: displays depth and color and the skeleton on both images
-5) pointCloudDemo.m: displays depth and pointcloud
-6) bodyIndexDemo.m: displays body index frames
-7) faceDemo.m: detect and track faces showing the facial landmarks and face properties
-8) faceHDDemo.m: detect and track faces showing the 17 animation units and the high definition model
-9) kinectFusionDemo.m: demonstrates the use of Kinect Fusion. This is still in BETA. Need fixing memory leakage in C++ causing MATLAB to crash on a second run.
-10) calibrationDemo.m: obtain cameras intrinsic parameters.
+5) pointCloudDemo.m: displays depth and a colored point cloud on a scatter3 
+6) pointCloudDemo2.m displays depth and a colored point cloud using MATLAB's built-in pointCloud object and pcshow. 
+7) bodyIndexDemo.m: displays body index frames
+8) faceDemo.m: detect and track faces showing the facial landmarks and face properties
+9) faceHDDemo.m: detect and track faces showing the 17 animation units and the high definition model
+10) faceHDDemo2.m: builds a face model for the user and track the faces using this model.
+11) kinectFusionDemo.m: demonstrates the use of Kinect Fusion. This is still in BETA. Need fixing memory leakage in C++ causing MATLAB to crash on a second run.
+12) calibrationDemo.m: obtain depth camera intrinsic parameters and color camera parameters.

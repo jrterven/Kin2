@@ -43,7 +43,7 @@ colorAdditions = zeros(c_height*COL_SCALE,c_width*COL_SCALE,3,'uint8');
 
 % depth stream figure
 d.h = figure;
-d.ax = axes('units','pixels','drawmode','fast');
+d.ax = axes('units','pixels');
 d.im = imshow(depth,[0 255]);
 title('Depth Source (press q to exit)')
 set(gcf,'keypress','k=get(gcf,''currentchar'');'); % listen keypress
