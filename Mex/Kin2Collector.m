@@ -192,10 +192,10 @@ classdef Kin2Collector < Kin2
         end
         
         function set.bodies_log(this,val)
-            if isempty(this.body_log)
-                this.body_log = {val};
+            if isempty(this.bodies_log)
+                this.bodies_log = {val};
             else
-                this.body_log = [this.bodies_log;{val}];
+                this.bodies_log = [this.bodies_log;{val}];
             end
         end
         
