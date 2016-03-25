@@ -118,9 +118,11 @@ classdef Kin2Collector < Kin2
         end
         
         function clearLogs(this)
-            if ~isempty(this.streamingTimer)
-                error('Cannot clear logs while streaming.');
-            end
+            
+            % Let's let the logs clear while streaming
+            %if ~isempty(this.streamingTimer)
+            %    error('Cannot clear logs while streaming.');
+            %end
             this.time_log        = {};
             this.depth_log       = {};
             this.color_log       = {};
@@ -165,58 +167,52 @@ classdef Kin2Collector < Kin2
             end
         end
         
-        function set.time(this,val)
+        function set.time_log(this,val)
             if isempty(this.time_log)
                 this.time_log = {val};
             else
                 this.time_log = [this.time_log;{val}];
             end
-            this.time = val;
         end
         
-        function set.depth(this,val)
+        function set.depth_log(this,val)
             if isempty(this.depth_log)
                 this.depth_log = {val};
             else
                 this.depth_log = [this.depth_log;{val}];
             end
-            this.depth = val;
         end
         
-        function set.color(this,val)
+        function set.color_log(this,val)
             if isempty(this.color_log)
                 this.color_log = {val};
             else
                 this.color_log = [this.color_log;{val}];
             end
-            this.color = val;
         end
         
-        function set.bodies(this,val)
+        function set.bodies_log(this,val)
             if isempty(this.body_log)
                 this.body_log = {val};
             else
                 this.body_log = [this.bodies_log;{val}];
             end
-            this.body = val;
         end
         
-        function set.bodyIndex(this,val)
+        function set.bodyIndex_log(this,val)
             if isempty(this.bodyIndex_log)
                 this.bodyIndex_log = {val};
             else
                 this.bodyIndex_log = [this.bodyIndex_log;{val}];
             end
-            this.bodyIndex = val;
         end
         
-        function set.bones(this,val)
+        function set.bones_log(this,val)
             if isempty(this.bones_log)
                 this.bones_log = {val};
             else
                 this.bones_log = [this.bones_log;{val}];
             end
-            this.bones = val;
         end
         
         function set.faces(this,val)
@@ -228,31 +224,28 @@ classdef Kin2Collector < Kin2
             this.faces = val;
         end
         
-        function set.hdFaces(this,val)
+        function set.hdFaces_log(this,val)
             if isempty(this.hdFaces_log)
                 this.hdFaces_log = {val};
             else
                 this.hdFaces_log = [this.hdFaces_log;{val}];
             end
-            this.hdFaces = val;
         end
         
-        function set.infrared(this,val)
+        function set.infrared_log(this,val)
             if isempty(this.infrared_log)
                 this.infrared_log = {val};
             else
                 this.infrared_log = [this.infrared_log;{val}];
             end
-            this.infrared = val;
         end
         
-        function set.pointCloud(this,val)
+        function set.pointCloud_log(this,val)
             if isempty(this.pointCloud_log)
                 this.pointCloud_log = {val};
             else
                 this.pointCloud_log = [this.pointCloud_log;{val}];
             end
-            this.pointCloud = val;
         end
         
         %% --- Data Streaming / Polling
@@ -309,19 +302,47 @@ classdef Kin2Collector < Kin2
         function fetchData(this)
             
             this.time = this.timeNow;
+            this.time_log = this.time;
                         
             % update with Kin2_mex data if source is selected
             % TODO:
             %   bones and point cloud need flags or something
-            if this.flag_depth, this.depth = this.getDepth(); end
-            if this.flag_color, this.color = this.getColor(); end
-            if this.flag_body, this.bodies = this.getBodies(); end
-            if this.flag_bodyIndex, this.bodyIndex = this.getBodyIndex(); end
-            %if this.flag_bones, this.bones = this.getBones(); end
-            if this.flag_face, this.faces = this.getFaces(); end
-            if this.flag_hd_face, this.hdFaces = this.getHDFaces(); end
-            if this.flag_infrared, this.infrared = this.getInfrared(); end
-            %if this.flag_point_cloud, this.pointCloud = this.getPointCloud(); end
+            if this.flag_depth
+                this.depth = this.getDepth();
+                this.depth_log = this.depth;
+            end
+            if this.flag_color
+                this.color = this.getColor(); 
+                this.color_log = this.color;
+            end
+            if this.flag_body
+                this.bodies = this.getBodies(); 
+                this.bodies_log = this.bodies;
+            end
+            if this.flag_bodyIndex
+                this.bodyIndex = this.getBodyIndex(); 
+                this.bodyIndex_log = this.bodyIndex;
+            end
+            %if this.flag_bones
+            %    this.bones = this.getBones();
+            %    this.bones_log = this.bones;
+            %end
+            if this.flag_face
+                this.faces = this.getFaces(); 
+                this.faces_log = this.faces;
+            end
+            if this.flag_hd_face
+                this.hdFaces = this.getHDFaces(); 
+                this.hdFaces_log = this.hdFaces;
+            end
+            if this.flag_infrared
+                this.infrared = this.getInfrared(); 
+                this.infrared_log = this.infrared;
+            end
+            %if this.flag_point_cloud
+            %    this.pointCloud = this.getPointCloud();
+            %    this.pointCloud_log = this.pointCloud;
+            %end
             
         end        
         
