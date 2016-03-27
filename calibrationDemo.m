@@ -92,7 +92,7 @@ while true
             disp('--------------------------------------------');
             k = [];
         elseif strcmp(k,'c')
-            calib = k2.getColorIntrinsics;
+            calib = k2.getColorCalib;
             disp(' ');
             disp('------------ Color Camera Parameters ------------')
             disp(['Focal Length X: ' num2str(calib.FocalLengthX)]);

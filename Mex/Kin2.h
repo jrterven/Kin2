@@ -3,12 +3,15 @@
 ///
 ///		Description: 
 ///			Kin2 class encapsulates the funtionality of Kinect2 Sensor.
-///			Define methods to initialize, and get images from sensor.
-///			It uses Kinect2 SDK from Microsoft.
+///         It uses Kinect2 SDK from Microsoft.
 ///			Copyright (c) Microsoft Corporation.  All rights reserved.
-///
-///		Usage:
-///			Run demos
+///			
+///         Define methods to:
+///          * Initialize, and get images from the depth, color, and infrared cameras.
+///          * Coordinate Mapping between cameras.
+///          * Body tracking
+///          * Face and HD face processing
+///          * 3D reconstruction
 ///
 ///		Authors: 
 ///			Juan R. Terven
@@ -35,6 +38,7 @@
 ///         Mar/09/2016: Add pointclouds with color and pointCloud MATLAB object
 ///         Mar/15/2016: Add radial distortion to the color camera calibration
 ///         Mar/18/2016: Fix HD face shape units
+///         Mar/25/2016: Update documentation
 ///////////////////////////////////////////////////////////////////////////
 #include <Kinect.h>
 #include <NuiKinectFusionApi.h>
@@ -79,7 +83,9 @@ namespace k2
 	}HDFaceData;
 }
 
-/*********** Kin2 Class **********************/
+/*************************************************************************/
+/************************** Kin2 Class ***********************************/
+/*************************************************************************/
 class Kin2
 {
     static const int        cDepthWidth  = 512;     // depth image width
@@ -89,6 +95,7 @@ class Kin2
     static const int        cColorWidth  = 1920;    // color image width
     static const int        cColorHeight = 1080;    // color image height
     static const int        cNumColorPix = cColorWidth*cColorHeight; // number of color pixels
+
 public:   
     Kin2(UINT16 sources);   // Constructor    
     ~Kin2();                // Destructor
@@ -121,18 +128,20 @@ public:
         std::vector<std::vector<JointOrientation> >& bodiesJointsOrientations,
         std::vector<HandState>& lhs, std::vector<HandState>& rhs);
     
-    /************ Face Tracking *****************/
+    /************ Face Processing public functions *****************/
     void getFaces(std::vector<k2::FaceData>& facesData);
     void getHDFaces(bool withVertices, std::vector<k2::HDFaceData>& facesData);
     void buildHDFaceModels(int &collectionStatus, int &captureStatus);
     
-    /*************** Kinect Fusion***************/
+    /*************** Kinect Fusion public functions ***************/
 	void KF_init(int voxelsPerMeter = 64, int voxelsX = 256, int voxelsY = 256, int voxelsZ = 256, bool processorType = true, bool autoReset = true);
 	void KF_update();
 	void KF_getVolumeImage(BYTE volumeImg[]);
 	void KF_reset();
 	HRESULT KF_getMesh(INuiFusionMesh **ppMesh);
-        
+    
+    /*************** Other methods ***************/
+    void extractRotationInDegrees(Vector4& pQuaternion, double& dPitch, double& dYaw, double& dRoll);
 private:    
     // Current Kinect
     IKinectSensor*          m_pKinectSensor;		// The Kinect sensor
@@ -163,18 +172,14 @@ private:
 	// HDFace readers
 	IHighDefinitionFaceFrameReader*	m_pHDFaceFrameReaders[BODY_COUNT];
     
+    // HD Face models
     IFaceModelBuilder*		m_pFaceModelBuilder[BODY_COUNT];
 	bool					m_faceModelReady[BODY_COUNT];
 	bool					m_faceModelWarning[BODY_COUNT];		// keep track of the face model warning message
 	IFaceAlignment*			m_pFaceAlignment[BODY_COUNT];
-	IFaceModel*				m_pFaceModel[BODY_COUNT];	
-    
-    // HD face data
-    //float*                  m_pAnimationUnits;
-    //float*                  m_pShapeUnits;
-    //CameraSpacePoint*       m_pFaceModelVertices;
+	IFaceModel*				m_pFaceModel[BODY_COUNT];	    
              
-    // Indicators of data available
+    // Flags of available data
     bool        m_newDepthData;
     bool        m_newColorData;
     bool        m_newInfraredData;
@@ -184,12 +189,7 @@ private:
     // Initialization flags
     k2::Flags       m_flags;
     
-    /************************************************************/
-	/******  Face Processing private variables and functions ******/
-	/************************************************************/
-    // Store faces data
-	//std::vector<k2::FaceData> m_facesData;
-    //std::vector<k2::HDFaceData> m_HDfacesData;
+    /************ Face Processing private functions *****************/
 
 	// define the face frame features required to be computed by this application
 	static const DWORD c_FaceFrameFeatures =
@@ -204,20 +204,13 @@ private:
 		| FaceFrameFeatures::FaceFrameFeatures_LookingAway
 		| FaceFrameFeatures::FaceFrameFeatures_Glasses
 		| FaceFrameFeatures::FaceFrameFeatures_FaceEngagement;
-
-	//void ProcessFaces();
-    //void ProcessHDFaces();
     
-    /************************************************************/
-	/******  Kinect Fusion private variables and functions ******/
-	/************************************************************/
+     /*************** Kinect Fusion private variables and functions ***************/
 	static const int            cResetOnTimeStampSkippedMilliseconds = 1000;  // ms
 	static const int            cResetOnNumberOfLostFrames = 100;
 
 	/// Setup or update the Undistortion calculation for the connected camera
-	HRESULT		KF_SetupUndistortion();
-
-	
+	HRESULT		KF_SetupUndistortion();	
 	HRESULT		OnCoordinateMappingChanged();
 
 	/// Initialize Kinect Fusion volume and images for processing
@@ -225,7 +218,6 @@ private:
 
 	/// Handle new depth data
 	void		KF_ProcessDepth();
-
 	UINT		m_cDepthImagePixels;
 
 	/// The Kinect Fusion Reconstruction Volume
@@ -294,5 +286,5 @@ private:
 	/// Small volumes should be shifted, as the Kinect hardware has a minimum sensing limit of ~0.35m,
 	/// inside which no valid depth is returned, hence it is difficult to initialize and track robustly  
 	/// when the majority of a small volume is inside this distance.
-	bool                        m_bTranslateResetPoseByMinDepthThreshold;
-}; // Kin2 class
+	bool                        m_bTranslateResetPoseByMinDepthThreshold;        
+}; // Kin2 class definition

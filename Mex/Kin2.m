@@ -1,20 +1,35 @@
-% Kin2 Class
-% Kin2 provides access to Kinect V2 functionality using the Kinect For
-% Windows SDK 2.0
-%
-% See the demos for its usage.
-% See README.txt file for a brief description of each demo.
-% 
-% Authors:
-% Juan R. Terven, jrterven@hotmail.com
-% Diana M. Cordova, diana_mce@hotmail.com
-% 
-% Citation:
-% J. R. Terven, D. M. Cordova, "A Kinect 2 Toolbox for MATLAB", 
-% https://github.com/jrterven/Kin2, 2016.
-% 
 classdef Kin2 < handle
-    %KIN2 MATLAB class wrapper to an underlying C++ Kin2 class
+    % Kin2 Toolbox. A Kinect V2 Toolbox for MATLAB.
+    % This toolbox encapsulates most of the Kinect for Windows SDK 2.0 
+    % functionality in a single class with high-level methods. 
+    % The toolbox is written mostly in C++ with MATLAB Mex functions 
+    % providing access to color, depth, infrared, and body index frames; 
+    % coordinate mapping capabilities; real-time six-bodies tracking with 
+    % 25 joints and hands states; face and high-definition face processing; 
+    % and real-time 3D reconstruction.
+    %
+    % See the demos for its usage.
+    % 1) videoDemo.m: displays depth, color, and infrared video.
+    % 2) mappingDemo.m: displays depth and color video, and allows to map points from one image to the other (See usage comments at the beginning of the script).
+    % 3) mapping2CamDemo.m: displays depth and color and allows to map points from depth and color to camera space and viceversa.
+    % 4) bodyDemo.m: displays depth and color and the skeleton on both images
+    % 5) pointCloudDemo.m: displays depth and a colored point cloud on a scatter3 
+    % 6) pointCloudDemo2.m displays depth and a colored point cloud using MATLAB's built-in pointCloud object and pcshow. 
+    % 7) bodyIndexDemo.m: displays body index frames
+    % 8) faceDemo.m: detect and track faces showing the facial landmarks and face properties
+    % 9) faceHDDemo.m: detect and track faces showing the 17 animation units and the high definition model
+    % 10) faceHDDemo2.m: builds a face model for the user and track the faces using this model.
+    % 11) kinectFusionDemo.m: demonstrates the use of Kinect Fusion. This is still in BETA. Need fixing memory leakage in C++ causing MATLAB to crash on a second run.
+    % 12) calibrationDemo.m: obtain depth camera intrinsic parameters and color camera parameters.
+    % 
+    % Authors:
+    % Juan R. Terven, jrterven@hotmail.com
+    % Diana M. Cordova, diana_mce@hotmail.com
+    % 
+    % Citation:
+    % J. R. Terven, D. M. Cordova, "A Kinect 2 Toolbox for MATLAB", 
+    % https://github.com/jrterven/Kin2, 2016.
+    % 
     properties (SetAccess = private, Hidden = true)
         objectHandle; % Handle to the underlying C++ class instance
         
@@ -30,91 +45,104 @@ classdef Kin2 < handle
         flag_face = false;
         flag_hd_face = false;
     end
+    
+    properties (Constant)
+        cDepthWidth     = 512;  % Depth frame width
+        cDepthHeight    = 424;  % Depth frame height
+        cColorWidth     = 1920; % Color frame width
+        cColorHeight    = 1080; % Color frame height
         
-    properties (SetAccess = public)
-        cDepthWidth     = 512;
-        cDepthHeight    = 424;
-        cColorWidth     = 1920;
-        cColorHeight    = 1080;
+        JointType_SpineBase     = 1;    % SpineBase Joint value 
+        JointType_SpineMid      = 2;    % SpineMid Joint value 
+        JointType_Neck          = 3;    % Neck Joint value 
+        JointType_Head          = 4;    % Head Joint value 
+        JointType_ShoulderLeft	= 5;    % Shoulder left Joint value 
+        JointType_ElbowLeft     = 6;    % Elbow left Joint value 
+        JointType_WristLeft     = 7;    % Wrist left Joint value 
+        JointType_HandLeft      = 8;    % Hand left Joint value 
+        JointType_ShoulderRight	= 9;    % Shoulder right Joint value 
+        JointType_ElbowRight	= 10;   % Elbow right Joint value 
+        JointType_WristRight	= 11;   % Wrist right Joint value 
+        JointType_HandRight     = 12;   % Hand right Joint value 
+        JointType_HipLeft       = 13;   % Hip left Joint value 
+        JointType_KneeLeft      = 14;   % Knee left Joint value 
+        JointType_AnkleLeft     = 15;   % Ankle left Joint value 
+        JointType_FootLeft      = 16;   % Foot left Joint value 
+        JointType_HipRight      = 17;   % Hip right Joint value 
+        JointType_KneeRight     = 18;   % Knee right Joint value 
+        JointType_AnkleRight	= 19;   % Ankle right Joint value 
+        JointType_FootRight     = 20;   % Foot right Joint value 
+        JointType_SpineShoulder	= 21;   % Spine shoulder Joint value 
+        JointType_HandTipLeft	= 22;   % Hand tip left Joint value 
+        JointType_ThumbLeft     = 23;   % Thumb right Joint value 
+        JointType_HandTipRight	= 24;   % Hand tip right Joint value 
+        JointType_ThumbRight	= 25;   % Thumb right Joint value 
+        JointType_Count         = 25;   % Number of Joint value 
         
-        % Joints constants
-        JointType_SpineBase     = 1;
-        JointType_SpineMid      = 2;
-        JointType_Neck          = 3;
-        JointType_Head          = 4;
-        JointType_ShoulderLeft	= 5;
-        JointType_ElbowLeft     = 6;
-        JointType_WristLeft     = 7;
-        JointType_HandLeft      = 8;
-        JointType_ShoulderRight	= 9;
-        JointType_ElbowRight	= 10;
-        JointType_WristRight	= 11;
-        JointType_HandRight     = 12;
-        JointType_HipLeft       = 13;
-        JointType_KneeLeft      = 14;
-        JointType_AnkleLeft     = 15;
-        JointType_FootLeft      = 16;
-        JointType_HipRight      = 17;
-        JointType_KneeRight     = 18;
-        JointType_AnkleRight	= 19;
-        JointType_FootRight     = 20;
-        JointType_SpineShoulder	= 21;
-        JointType_HandTipLeft	= 22;
-        JointType_ThumbLeft     = 23;
-        JointType_HandTipRight	= 24;
-        JointType_ThumbRight	= 25;
-        JointType_Count         = 25;
+        HandState_Unknown       = 0;    % Hand State unknown value
+        HandState_NotTracked	= 1;    % Hand State not tracked value
+        HandState_Open          = 2;    % Hand State open value
+        HandState_Closed        = 3;    % Hand State closed value
+        HandState_Lasso         = 4;    % Hand State lasso value
+                
+        DetectionResult_Unknown = 0;    % Face detection Unknown value
+        DetectionResult_No      = 1;    % Face detection No value
+        DetectionResult_Maybe	= 2;    % Face detection Maybe value
+        DetectionResult_Yes     = 3;    % Face detection Yes value
+    end
+    
+    properties (SetAccess = public)        
+        faceProperties = cell(8,1);     % Face properties strings                
+        faceAnimationUnits = cell(17,1);% Face Animation units strings
         
-        % Hand State constants
-        HandState_Unknown       = 0,
-        HandState_NotTracked	= 1,
-        HandState_Open          = 2,
-        HandState_Closed        = 3,
-        HandState_Lasso         = 4
+        % Face Builder Collection Status: complete
+        FaceModelBuilderCollectionStatus_Complete               = 0;
+        % Face Builder Collection Status: More Frames Needed
+        FaceModelBuilderCollectionStatus_MoreFramesNeeded       = 1;
+        % Face Builder Collection Status: Front View Frames Needed
+        FaceModelBuilderCollectionStatus_FrontViewFramesNeeded	= 2;
+        % Face Builder Collection Status: Left Views Needed
+        FaceModelBuilderCollectionStatus_LeftViewsNeeded        = 4;
+        % Face Builder Collection Status: Right Views Needed
+        FaceModelBuilderCollectionStatus_RightViewsNeeded       = 8;
+        % Face Builder Collection Status: Tilted Up Views Needed
+        FaceModelBuilderCollectionStatus_TiltedUpViewsNeeded	= 16;
         
-        % Face detection constants
-        DetectionResult_Unknown = 0;
-        DetectionResult_No      = 1;
-        DetectionResult_Maybe	= 2;
-        DetectionResult_Yes     = 3;
-        
-        % Face properties
-        faceProperties = cell(8,1);
-        
-        % Face Animation units
-        faceAnimationUnits = cell(17,1);
-        
-        % Face Builder Collection Status
-        FaceModelBuilderCollectionStatus_Complete               = 0,
-        FaceModelBuilderCollectionStatus_MoreFramesNeeded       = 1,
-        FaceModelBuilderCollectionStatus_FrontViewFramesNeeded	= 2,
-        FaceModelBuilderCollectionStatus_LeftViewsNeeded        = 4,
-        FaceModelBuilderCollectionStatus_RightViewsNeeded       = 8,
-        FaceModelBuilderCollectionStatus_TiltedUpViewsNeeded	= 16
-        
-        % Face Builder Capture Status
-        FaceModelBuilderCaptureStatus_GoodFrameCapture	= 0,
-        FaceModelBuilderCaptureStatus_OtherViewsNeeded	= 1,
-        FaceModelBuilderCaptureStatus_LostFaceTrack     = 2,
-        FaceModelBuilderCaptureStatus_FaceTooFar        = 3,
-        FaceModelBuilderCaptureStatus_FaceTooNear       = 4,
-        FaceModelBuilderCaptureStatus_MovingTooFast     = 5,
-        FaceModelBuilderCaptureStatus_SystemError       = 6        
+        % Face Builder Capture Status: Good Frame Capture
+        FaceModelBuilderCaptureStatus_GoodFrameCapture	= 0;
+        % Face Builder Capture Status: Other Views Needed
+        FaceModelBuilderCaptureStatus_OtherViewsNeeded	= 1;
+        % Face Builder Capture Status: Lost Face Track
+        FaceModelBuilderCaptureStatus_LostFaceTrack     = 2;
+        % Face Builder Capture Status: Face Too Far
+        FaceModelBuilderCaptureStatus_FaceTooFar        = 3;
+        % Face Builder Capture Status: Face Too Near
+        FaceModelBuilderCaptureStatus_FaceTooNear       = 4;
+        % Face Builder Capture Status: Moving Too Fast
+        FaceModelBuilderCaptureStatus_MovingTooFast     = 5;
+        % Face Builder Capture Status: System Error
+        FaceModelBuilderCaptureStatus_SystemError       = 6;       
         
         % Color calibration initialization parameters
         calibParams = struct;
         colorCalib = false;     % Is color calibration already calculated?
         colorFL = 1000;         % focal length
-        colorPPX = 960;         % ppx
-        colorPPY = 540;         % ppy  
+        colorPPX = 960;         % principal point x
+        colorPPY = 540;         % principal point y  
         colorRot = eye(3);      % rotation of color camera wrt depth camera
         colorTranslation = [0 0 0]; % translation of color camera wrt depth
         colork1 = 0; colork2 = 0; colork3 = 0; % radial distortion parameters
     end
     
-    methods        
+    methods(Access = public)        
         function this = Kin2(varargin)
-            % Constructor - Create a new C++ class instance 
+            % Constructor - Create a new C++ class instance.
+            % Create a new Kin2 object with the selected sources:
+            % 'color' 'depth' 'infrared' 'body_index' 'body' 'face' 'HDface'
+            %
+            % Example: Create a Kin2 object to get color, depth and
+            % infrared frames:
+            % k2 = Kin2('color','depth','infrared');
             
             % Fill the face properties descriptions
             this.faceProperties(1) = cellstr('Happy');
@@ -156,13 +184,13 @@ classdef Kin2 < handle
             this.flag_hd_face = ismember('HDface',varargin);
             flags = uint16(0);
             
-            % Extract flags values (from Kinect.h)
-%             FrameSourceTypes_None	= 0,
-%             FrameSourceTypes_Color	= 0x1,
-%             FrameSourceTypes_Infrared	= 0x2,
-%             FrameSourceTypes_Depth	= 0x8,
-%             FrameSourceTypes_BodyIndex	= 0x10,
-%             FrameSourceTypes_Body	= 0x20,
+            % Flags values from Kinect.h
+            % FrameSourceTypes_None	= 0,
+            % FrameSourceTypes_Color	= 0x1,
+            % FrameSourceTypes_Infrared	= 0x2,
+            % FrameSourceTypes_Depth	= 0x8,
+            % FrameSourceTypes_BodyIndex	= 0x10,             
+            % FrameSourceTypes_Body	= 0x20,
             if this.flag_color, flags = flags + 1; end
             if this.flag_infrared, flags = flags + 2; end
             if this.flag_depth, flags = flags + 8; end
@@ -175,49 +203,55 @@ classdef Kin2 < handle
         end
                 
         function delete(this)
-            % Destructor - Destroy the C++ class instance
+            % Destructor - Destroy the Kin2 instance.
             Kin2_mex('delete', this.objectHandle);            
         end
         
         %% video Sources        
         function varargout = updateData(this, varargin)
-            % updateData - Update video frames. Call this function before
-            % grabbing the frames.
-            % Return: a flag indicating valid data.
+            % updateData - Update Kinect data. 
+            % Call this function before grabbing new data.
+            % Return: flag indicating valid data.
             [varargout{1:nargout}] = Kin2_mex('updateData', this.objectHandle, varargin{:});
         end
                 
         function varargout = getDepth(this, varargin)
-            % getDepth - return depth frame from Kinect2. You must call
-            % updateData before and verify that there is valid data.
+            % getDepth - returns depth frame from Kinect V2. 
+            % Returns a 512 x 424 16-bit depth frame. 
+            % You must call updateData before and verify that there is valid data.
             % See videoDemo.m
             [varargout{1:nargout}] = Kin2_mex('getDepth', this.objectHandle, varargin{:});
         end
                 
         function varargout = getColor(this, varargin)
-            % getColor - return color frame from Kinect2. You must call
-            % updateData before and verify that there is valid data.
+            % getColor - returns color frame from Kinect V2. 
+            % Returns a 1920 x 1080 3-channel color frame.
+            % You must call updateData before and verify that there is valid data.
             % See videoDemo.m
             [varargout{1:nargout}] = Kin2_mex('getColor', this.objectHandle, varargin{:});
         end
                 
         function varargout = getInfrared(this, varargin)
-            % getInfrared - return infrared frame from Kinect2. You must call
-            % updateData before and verify that there is valid data.
+            % getInfrared - returns infrared frame from Kinect V2. 
+            % Returns a 512 x 424 16-bit depth frame. 
+            % You must call updateData before and verify that there is valid data.
             % See videoDemo.m
             [varargout{1:nargout}] = Kin2_mex('getInfrared', this.objectHandle, varargin{:});
         end
         
         %% Data Sources
         function varargout = getBodyIndex(this, varargin)
-            % getBodyIndex - return body index frame from Kinect2. You must call
-            % updateData before and verify that there is valid data.
+            % getBodyIndex - returns body index frame from Kinect2. 
+            % Returns a 512 x 424 8-bit mask with numeric values labeling 
+            %   each body silhouette. 
+            % You must call updateData before and verify that there is valid data.
             % See bodyIndexDemo.m
             [varargout{1:nargout}] = Kin2_mex('getBodyIndex', this.objectHandle, varargin{:});
         end
         
         function varargout = getPointCloud(this, varargin)
-            % getPointCloud - return an 217088nx3 point cloud or a MATLAB 
+            % getPointCloud - returns a point cloud or a pointCloud object.
+            % Returns a 217088 x 3 point cloud or a MATLAB 
             % built-in pointCloud object.
             % Name-Value Pair Arguments: 
             %   'output' - output format of the pointcloud
@@ -291,9 +325,9 @@ classdef Kin2 < handle
         end
         
         function varargout = getFaces(this, varargin)
-            % getFaces - return structure array with the properties for
-            % each found face. You must call updateData before and verify that
-            % there is valid data.
+            % getFaces - returns structure array with faces data.
+            % returns structure array with the properties for
+            % each found face. 
             % The returned structure has the following fields for each
             % detected face:
             % - FaceBox: rectangle coordinates representing the face position in
@@ -308,14 +342,15 @@ classdef Kin2 < handle
             %   MouthOpen, MouthMoved, LookingAway
             %   The detection results are: 
             %   Unknown = 0, No = 1, Maybe = 2, Yes = 3;
+            %
+            % You must call updateData before and verify that
+            % there is valid data.
             % See faceDemo.m
             [varargout{1:nargout}] = Kin2_mex('getFaces', this.objectHandle, varargin{:});
         end
         
         function varargout = getHDFaces(this, varargin)
-            % getHDFaces - return structure array with the following information:
-            % 
-            % You must call updateData before and verify that there is valid data
+            % getHDFaces - returns structure array with HD faces data.
             % The returned stucture has the following fields for each
             % detected face:
             % - FaceBox: rectangle coordinates representing the face position in
@@ -330,6 +365,8 @@ classdef Kin2 < handle
             % - FaceModel (optional): 3 x 1347 points of a 3D face model computed by face capture
             %   Use 'WithVertices','true' or 'false' to get the face model
             %   or ignore the face model.
+            %
+            %  You must call updateData before and verify that there is valid data
             % See faceHDDemo.m                    
             
             % Required Vertices?
@@ -352,13 +389,13 @@ classdef Kin2 < handle
         
         function modelReady = buildHDFaceModels(this, varargin)  
             % buildHDFaceModels - Face captura capabilities of Kinect SDK 2.0
-            % Quoting High definition face tracking: 
-            % The API will tell a game developer where the person needs to be 
-            % in the camera view, the quality of the frames it captures, 
-            % and when it has enough valid frames will calculate the shape 
-            % of the user’s face and provide a game developer with those shape values. 
-            % The game developer can then use those values to influence 
-            % their game character design (e.g. make the player’s in-game character look more like the player).
+            % Implements face capture.
+            % The function tell the user where he/she needs to be 
+            % in the camera view, and when it has enough valid frames will 
+            % calculate the shape of the user’s face.
+            % The developer can then use those values to influence 
+            % their game character design (e.g. make the player’s in-game 
+            %   character look more like the player).
             %
             % Name-Value Pair Arguments: 
             % 'CollectionStatus' - display model collection status information
@@ -404,8 +441,8 @@ classdef Kin2 < handle
         end                
         
         function varargout = getDepthIntrinsics(this, varargin)
-            % getDepthIntrinsics - return the depth camera intrinsic
-            % parameters inside a structure containing:
+            % getDepthIntrinsics - return the depth camera intrinsic parameters.
+            % The parameters are returned inside a structure containing:
             % FocalLengthX, FocalLengthY, PrincipalPointX, PrincipalPointY,
             % RadialDistortionSecondOrder, RadialDistortionFourthOrder, 
             % RadialDistortionSixthOrder
@@ -415,9 +452,9 @@ classdef Kin2 < handle
             [varargout{1:nargout}] = Kin2_mex('getDepthIntrinsics', this.objectHandle, varargin{:});
         end
         
-        function calibParams = getColorIntrinsics(this, varargin)
-            % getColorIntrinsics - return the color camera intrinsic and
-            % extrinsic parameters inside a structure containing:
+        function calibParams = getColorCalib(this, varargin)
+            % getColorIntrinsics - return the color camera calibration.
+            % The calibration data are returned inside a structure containing:
             % FocalLengthX, FocalLengthY, PrincipalPointX, PrincipalPointY,
             % Rotation (wrt depth camera), Translation(wrt depth camera), 
             % RadialDistortionSecondOrder, RadialDistortionFourthOrder, 
@@ -489,8 +526,8 @@ classdef Kin2 < handle
         
         %% Depth mappings        
         function varargout = mapDepthPoints2Color(this, varargin)
-            % mapDepthPoints2Color - map the input points from depth 
-            % coordinates to color coordinates
+            % mapDepthPoints2Color - map points from depth to color.
+            % Map the input points from depth coordinates to color coordinates
             % Input and output: n x 2 matrix (n points)
             % See mappingDemo.m
             inputSize = size(varargin{1},1);
@@ -509,8 +546,9 @@ classdef Kin2 < handle
         end
                 
         function varargout = mapDepthPoints2Camera(this, varargin)
-            % mapDepthPoints2Camera - map the input points from depth 
-            % coordinates to camera space coordinates
+            % mapDepthPoints2Camera - map from depth to camera space.
+            % Map the input points from depth coordinates to camera space
+            % coordinates.
             % Input: n x 2 matrix (n points, x,y)
             % Output: n x 3 matrix (n points, x,y,z)
             % See mapping2CamDemo.m
@@ -521,8 +559,8 @@ classdef Kin2 < handle
         
         %% Color mappings
         function varargout = mapColorPoints2Depth(this, varargin)
-            % mapColorPoints2Depth - map the input points from color 
-            % coordinates to depth coordinates
+            % mapColorPoints2Depth - map from color to depth.
+            % Map the input points from color coordinates to depth coordinates
             % Input and output: n x 2 matrix (n points)
             % See mappingDemo.m
             inputSize = size(varargin{1},1);
@@ -530,8 +568,9 @@ classdef Kin2 < handle
         end
                 
         function varargout = mapColorPoints2Camera(this, varargin)
-            % mapColorPoints2Camera - map the input points from color 
-            % coordinates to camera space coordinates
+            % mapColorPoints2Camera - map from color to camera space.
+            % Map the input points from color coordinates to camera space
+            % coordinates.
             % Input: n x 2 matrix (n points, x,y)
             % Output: n x 3 matrix (n points, x,y,z)
             % See mapping2CamDemo.m
@@ -541,8 +580,9 @@ classdef Kin2 < handle
         
         %% Camera mappings         
         function varargout = mapCameraPoints2Depth(this, varargin)
-            % mapCameraPoints2Depth - map the input points from camera space 
-            % coordinates to depth coordinates
+            % mapCameraPoints2Depth - map from camera to depth space.
+            % Map the input points from camera space coordinates to depth
+            % coordinates.
             % Input: n x 3 matrix (n points, x,y,z)
             % Output: n x 2 matrix (n points, x,y)
             % See mapping2CamDemo.m
@@ -551,8 +591,9 @@ classdef Kin2 < handle
         end
         
         function varargout = mapCameraPoints2Color(this, varargin)
-            % mapCameraPoints2Color - map the input points from camera space 
-            % coordinates to color coordinates
+            % mapCameraPoints2Color - map from camera to color space.
+            % Map the input points from camera space coordinates to color
+            % coordinates.
             % Input: n x 3 matrix (n points, x,y,z)
             % Output: n x 2 matrix (n points, x,y)
             % See mapping2CamDemo.m
@@ -563,7 +604,7 @@ classdef Kin2 < handle
         %% Skeleton functions
                 
         function varargout = getBodies(this, varargin)
-            % getBodies - Get 3D bodies joints 
+            % getBodies - Get 3D bodies joints.
             % Input: Type of joints orientation output. It can be 'Quat' or
             % 'Euler'
             % Output: Structure array.
@@ -573,7 +614,7 @@ classdef Kin2 < handle
             %   camera space coordinates
             % - Orientation: 
             %   If input parameter is 'Quat': 4x25 matrix containing the 
-            %   orientation of each joint in [x; y; z, w]
+            %   orientation of each joint in [x; y; z; w]
             %   If input parameter is 'Euler': 3x25 matrix containing the 
             %   orientation of each joint in [Pitch; Yaw; Roll] 
             % -TrackingState: state of each joint. These can be:
@@ -596,7 +637,7 @@ classdef Kin2 < handle
         
         function drawBodies(this,handle,bodies,destination,jointsSize, ...
                 bonesThickness,handsSize)
-            % drawBodies - % Draw bodies on depth image
+            % drawBodies - Draw bodies on depth image
             % Input Parameters: 
             % 1) handle: image axes handle
             % 2) bodies: bodies structure returned by getBodies method
@@ -641,8 +682,9 @@ classdef Kin2 < handle
         end
                 
         function [bonesx, bonesy] = getBones(this,joints)
-            % getBones - Get the bones pair of coordinates: (x1,x2)(y1,y2) 
-            % to be drawn with lines
+            % getBones - get the bones coordinates pair: (x1,x2)(y1,y2). 
+            % Get the bones coordinates pair: (x1,x2)(y1,y2)to be drawn
+            % with lines.
             % Input: 2D joints
             % output: 24 (x,y) coordinates. 
             bonesx = zeros(2,24);
@@ -708,7 +750,7 @@ classdef Kin2 < handle
         end
                 
         function drawHand(this,handle, handState, handPos,size)
-            % drawHand - draw the hand
+            % drawHand - Draw the hand.
             % Input parameters:
             % 1) handle: image axes handle
             % 2) handState: hand state, obtained from bodies structure (RightHandState
@@ -734,7 +776,7 @@ classdef Kin2 < handle
         
         %% Face Processing
         function drawFaces(this,handle,faces,pointsSize,displayText,fontSize)
-            % drawFaces: Display the faces data
+            % drawFaces: Display the faces data.
             % Input parameters: 
             % 1) handle: image axes
             % 2) faces: faces structure obtained with getFaces
@@ -795,27 +837,10 @@ classdef Kin2 < handle
                 end
             end
         end
-        
-        function str = decodeFaceProperties(this,detectionResult)
-            % decodeFaceProperties: return description of a numeric face
-            % property. This function can be used to display the name of
-            % the properties. See method drawFaces for usage example
-            switch(detectionResult)
-                case this.DetectionResult_Unknown 
-                    str = 'Unknown';
-                case this.DetectionResult_No 
-                    str = 'No';
-                case this.DetectionResult_Maybe 
-                    str = 'Maybe';
-                case this.DetectionResult_Yes 
-                    str = 'Yes';
-                otherwise
-                    str = 'Unknown';
-            end
-        end
-        
-        function drawHDFaces(this,handle,faces,displayPoints,displayText,fontSize)
-            % drawHDFaces: display the HD faces data and face model
+    end
+    
+    function drawHDFaces(this,handle,faces,displayPoints,displayText,fontSize)
+            % drawHDFaces: display the HD faces data and face model.
             % Input Parameters: 
             % 1) handle: image axes
             % 2) faces: structure obtained with getFaces
@@ -893,51 +918,13 @@ classdef Kin2 < handle
                 end
 
             end
-        end
+    end
         
-        function str = CollectionStatusCode2Str(this,code)
-            switch(code)
-                case this.FaceModelBuilderCollectionStatus_Complete 
-                    str = 'Face model completed!';
-                case this.FaceModelBuilderCollectionStatus_MoreFramesNeeded 
-                    str = 'More frames needed';
-                case this.FaceModelBuilderCollectionStatus_FrontViewFramesNeeded 
-                    str = 'Frontal view frames needed';
-                case this.FaceModelBuilderCollectionStatus_LeftViewsNeeded 
-                    str = 'Left view frames needed';
-                case this.FaceModelBuilderCollectionStatus_RightViewsNeeded 
-                    str = 'Right view frames needed';
-                case this.FaceModelBuilderCollectionStatus_TiltedUpViewsNeeded 
-                    str = 'Tilted up view frames needed';    
-                otherwise
-                    str = '';
-            end
-        end
-        
-        function str = CaptureStatusCode2Str(this,code)
-            switch(code)
-                case this.FaceModelBuilderCaptureStatus_GoodFrameCapture 
-                    str = 'Good frame capture';
-                case this.FaceModelBuilderCaptureStatus_OtherViewsNeeded 
-                    str = 'Other views needed';
-                case this.FaceModelBuilderCaptureStatus_LostFaceTrack 
-                    str = 'Lost face track';
-                case this.FaceModelBuilderCaptureStatus_FaceTooFar 
-                    str = 'Face too far';
-                case this.FaceModelBuilderCaptureStatus_FaceTooNear 
-                    str = 'Face too near';
-                case this.FaceModelBuilderCaptureStatus_MovingTooFast 
-                    str = 'User moving too fast';    
-                case this.FaceModelBuilderCaptureStatus_SystemError 
-                    str = 'System Error!';    
-                otherwise
-                    str = '';
-            end
-        end
+    
         
         %% Kinect Fusion
          function varargout = KF_init(this, varargin)
-            % KF_init - Initialize Kinect Fusion
+            % KF_init - Initialize Kinect Fusion.
             % See kinectFusionDemo.m
             [varargout{1:nargout}] = Kin2_mex('KF_init', this.objectHandle, varargin{:});
          end
@@ -965,9 +952,71 @@ classdef Kin2 < handle
             % See kinectFusionDemo.m
             [varargout{1:nargout}] = Kin2_mex('KF_reset', this.objectHandle, varargin{:});
          end
-           
-    end
-end
+         
+         methods(Access = protected)            
+        function str = decodeFaceProperties(this,detectionResult)
+            % decodeFaceProperties: return description of face property. 
+            % This function can be used to display the name of
+            % the properties. See method drawFaces for usage example
+            switch(detectionResult)
+                case this.DetectionResult_Unknown 
+                    str = 'Unknown';
+                case this.DetectionResult_No 
+                    str = 'No';
+                case this.DetectionResult_Maybe 
+                    str = 'Maybe';
+                case this.DetectionResult_Yes 
+                    str = 'Yes';
+                otherwise
+                    str = 'Unknown';
+            end
+        end
+        
+        function str = CollectionStatusCode2Str(this,code)
+            % CollectionStatusCode2Str: return face collection status description.
+            % Return a string description of a face collection status code.
+            switch(code)
+                case this.FaceModelBuilderCollectionStatus_Complete 
+                    str = 'Face model completed!';
+                case this.FaceModelBuilderCollectionStatus_MoreFramesNeeded 
+                    str = 'More frames needed';
+                case this.FaceModelBuilderCollectionStatus_FrontViewFramesNeeded 
+                    str = 'Frontal view frames needed';
+                case this.FaceModelBuilderCollectionStatus_LeftViewsNeeded 
+                    str = 'Left view frames needed';
+                case this.FaceModelBuilderCollectionStatus_RightViewsNeeded 
+                    str = 'Right view frames needed';
+                case this.FaceModelBuilderCollectionStatus_TiltedUpViewsNeeded 
+                    str = 'Tilted up view frames needed';    
+                otherwise
+                    str = '';
+            end
+        end
+        
+        function str = CaptureStatusCode2Str(this,code)
+            % CaptureStatusCode2Str: return face capture status description.
+            % Return a string description of a face capture status code.
+            switch(code)
+                case this.FaceModelBuilderCaptureStatus_GoodFrameCapture 
+                    str = 'Good frame capture';
+                case this.FaceModelBuilderCaptureStatus_OtherViewsNeeded 
+                    str = 'Other views needed';
+                case this.FaceModelBuilderCaptureStatus_LostFaceTrack 
+                    str = 'Lost face track';
+                case this.FaceModelBuilderCaptureStatus_FaceTooFar 
+                    str = 'Face too far';
+                case this.FaceModelBuilderCaptureStatus_FaceTooNear 
+                    str = 'Face too near';
+                case this.FaceModelBuilderCaptureStatus_MovingTooFast 
+                    str = 'User moving too fast';    
+                case this.FaceModelBuilderCaptureStatus_SystemError 
+                    str = 'System Error!';    
+                otherwise
+                    str = '';
+            end
+        end
+    end % protected methods
+end % Kin2 class
 
     
     
