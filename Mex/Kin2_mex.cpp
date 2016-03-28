@@ -312,34 +312,36 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     
     // mapDepthFrame2Color method
-//    if (!strcmp("mapDepthFrame2Color", cmd)) 
-//    {      
-        /*
-         // Get input parameter (depth coordinates)
-        double *depthCoords;
-        depthCoords = (double*)mxGetData(prhs[2]); 
-        
-        // Get input parameter (size)
-        int *size;
-        size = (int*)mxGetData(prhs[3]);       
-        
+    /*
+    if (!strcmp("mapDepthFrame2Color", cmd)) 
+    {                                          
         // Prepare output array
         UINT16 *colorCoordinates;   // pointer to output data
-        int outDim[2]={*size,2};        // two values (row vector)
+        int outDim[2]={424,512,2};        // two values (row vector)
+        int invalidData[3] = {0,0,0};
         
          // Reserve space for output array
-        plhs[0] = mxCreateNumericArray(2, outDim, mxUINT16_CLASS, mxREAL); 
+        plhs[0] = mxCreateNumericArray(3, outDim, mxUINT16_CLASS, mxREAL); 
         
         // Assign pointers to the output parameters
-        colorCoordinates = (UINT16*)mxGetPr(plhs[0]);     
-        */
-//        ColorSpacePoint* pDepth2Color = new ColorSpacePoint[217088];
+        colorCoordinates = (UINT16*)mxGetPr(plhs[0]);             
         
         // call the class method
-//        bool resutl = Kin2_instance->mapDepthFrame2Color();
+        bool result = Kin2_instance->mapDepthFrame2Color(colorCoordinates);
                
-//        return;
-//    }
+        if(!result)
+        {
+            plhs[0] = mxCreateNumericArray(3, invalidData, mxUINT16_CLASS, mxREAL);
+            return
+        }
+        else
+        {
+            
+        }
+                
+        return;
+    }
+     */
     
     // mapDepthPoints2Camera method
     if (!strcmp("mapDepthPoints2Camera", cmd)) 
@@ -508,6 +510,29 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         // call the class method
         Kin2_instance->mapCameraPoints2Color(cameraCoords, *size, colorCoords);
                
+        return;
+    }
+    
+    // alignColor2Depth method
+    if (!strcmp("alignColor2Depth", cmd)) 
+    {
+        unsigned char *alignedImage;    // pointer to output data
+        int colorDim[3]={424,512,3};
+        int invalidData[3] = {0,0,0};        
+        
+        // Call the method
+        plhs[0] = mxCreateNumericArray(3, colorDim, mxUINT8_CLASS, mxREAL);
+        
+        // Assign pointers to the output parameters
+        alignedImage = (unsigned char*)mxGetPr(plhs[0]);
+      
+        // Call the class function
+        bool validData;
+        Kin2_instance->alignColor2Depth(alignedImage,validData);
+        
+        if(!validData)
+            plhs[0] = mxCreateNumericArray(3, invalidData, mxUINT8_CLASS, mxREAL);
+        
         return;
     }
     

@@ -115,13 +115,15 @@ public:
     /************ Mappings **************/
     void mapDepthPoints2Color(double depthCoords[], int size, UINT16 colorCoords[]);
     void mapDepthPoints2Camera(double depthCoords[], int size, double cameraCoords[]);
-    bool mapDepthFrame2Color(ColorSpacePoint* depth2ColorMapping);
+    //bool mapDepthFrame2Color(ColorSpacePoint* depth2ColorMapping);
 
 	void mapColorPoints2Depth(double colorCoords[], int size, UINT16 depthCoords[]);
     void mapColorPoints2Camera(double colorCoords[], int size, double cameraCoords[]);
     
     void mapCameraPoints2Depth(double cameraCoords[], int size, UINT16 depthCoords[]);
     void mapCameraPoints2Color(double cameraCoords[], int size, UINT16 colorCoords[]);
+    
+    void alignColor2Depth(unsigned char alignedImage[], bool& validData);
     
     /************ Body Tracking *****************/
     void getBodies(std::vector<std::vector<Joint> >& bodiesJoints,

@@ -30,7 +30,7 @@ color = zeros(c_height*COL_SCALE,c_width*COL_SCALE,3,'uint8');
 
 % depth stream figure
 d.h = figure;
-d.ax = axes('drawmode','fast');
+d.ax = axes;
 d.im = imshow(zeros(d_height,d_width,'uint8'));
 %hold on;
 

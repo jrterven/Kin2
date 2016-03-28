@@ -220,6 +220,13 @@ classdef Kin2 < handle
             % Returns a 512 x 424 16-bit depth frame. 
             % You must call updateData before and verify that there is valid data.
             % See videoDemo.m
+            
+            % Verify that the depth source was selected
+            if ~this.flag_depth
+                this.delete;
+                error('No depth source selected!');
+            end
+            
             [varargout{1:nargout}] = Kin2_mex('getDepth', this.objectHandle, varargin{:});
         end
                 
@@ -228,6 +235,13 @@ classdef Kin2 < handle
             % Returns a 1920 x 1080 3-channel color frame.
             % You must call updateData before and verify that there is valid data.
             % See videoDemo.m
+            
+            % Verify that the color source was selected
+            if ~this.flag_color
+                this.delete;
+                error('No color source selected!');
+            end
+            
             [varargout{1:nargout}] = Kin2_mex('getColor', this.objectHandle, varargin{:});
         end
                 
@@ -236,8 +250,28 @@ classdef Kin2 < handle
             % Returns a 512 x 424 16-bit depth frame. 
             % You must call updateData before and verify that there is valid data.
             % See videoDemo.m
+            
+            % Verify that the infrared source was selected
+            if ~this.flag_infrared
+                this.delete;
+                error('No infrared source selected!');
+            end
             [varargout{1:nargout}] = Kin2_mex('getInfrared', this.objectHandle, varargin{:});
         end
+        
+        function varargout = getAlignColor2Depth(this, varargin)
+            % getAlignColor2Depth - Align Kinect color image to depth image.            
+            % Input: none
+            % Output: 424 x 512 3-channel color-to-depth aligned frame.
+            % See videoDemo.m
+            
+             % Verify that the color and depth sources were selected
+            if ~(this.flag_color && this.flag_depth)
+                this.delete;
+                error('Select color and depth sources!');
+            end
+            [varargout{1:nargout}] = Kin2_mex('alignColor2Depth', this.objectHandle, varargin{:});
+        end     
         
         %% Data Sources
         function varargout = getBodyIndex(this, varargin)
@@ -246,6 +280,13 @@ classdef Kin2 < handle
             %   each body silhouette. 
             % You must call updateData before and verify that there is valid data.
             % See bodyIndexDemo.m
+            
+            % Verify that the body_index was selected
+            if ~(this.flag_bodyIndex)
+                this.delete;
+                error('No body_index source selected!');
+            end
+            
             [varargout{1:nargout}] = Kin2_mex('getBodyIndex', this.objectHandle, varargin{:});
         end
         
@@ -346,6 +387,13 @@ classdef Kin2 < handle
             % You must call updateData before and verify that
             % there is valid data.
             % See faceDemo.m
+            
+            % Verify that the face source was selected
+            if ~this.flag_face
+                this.delete;
+                error('No face source selected!');
+            end
+            
             [varargout{1:nargout}] = Kin2_mex('getFaces', this.objectHandle, varargin{:});
         end
         
@@ -368,6 +416,12 @@ classdef Kin2 < handle
             %
             %  You must call updateData before and verify that there is valid data
             % See faceHDDemo.m                    
+            
+            % Verify that the HDface source was selected
+            if ~this.flag_hd_face
+                this.delete;
+                error('No HDface source selected!');
+            end
             
             % Required Vertices?
             p = inputParser;
@@ -403,6 +457,12 @@ classdef Kin2 < handle
             % 'CaptureStatus' - display model capture status information.
             %       'false'(default) | 'true'
             % See faceHDDemo2.m
+            
+            % Verify that the face source was selected
+            if ~this.flag_hd_face
+                this.delete;
+                error('No HDface source selected!');
+            end
             
             % Parse inputs
             p = inputParser;
@@ -449,6 +509,13 @@ classdef Kin2 < handle
             %
             % Usage: You must call updateData before and verify that there is valid data.
             % See calibrationDemo.m
+            
+            % Verify that the depth source was selected
+            if ~this.flag_depth
+                this.delete;
+                error('No depth source selected!');
+            end
+            
             [varargout{1:nargout}] = Kin2_mex('getDepthIntrinsics', this.objectHandle, varargin{:});
         end
         
@@ -462,6 +529,13 @@ classdef Kin2 < handle
             %
             % Usage: You must call updateData before and verify that there is valid data.
             % See calibrationDemo.m
+            
+            % Verify that the color source was selected
+            if ~this.flag_color
+                this.delete;
+                error('No color source selected!');
+            end
+            
             if this.colorCalib
                 calibParams = this.calibParams;
             else
@@ -533,17 +607,16 @@ classdef Kin2 < handle
             inputSize = size(varargin{1},1);
             [varargout{1:nargout}] = Kin2_mex('mapDepthPoints2Color', this.objectHandle, varargin{1},uint32(inputSize));
         end
-        
-                %% Depth mappings        
-        function varargout = mapDepthFrame2Color(this, varargin)
-            % NOT READY YET
-            % mapDepthFrame2Color - map an input depth image
-            % to color coordinates.
-            % Input: cDepthHeight x cDepthWidth matrix
-            % Output: cDepthHeight x cDepthWidth mapping matrix
-            inputSize = size(varargin{1},1);
-            [varargout{1:nargout}] = Kin2_mex('mapDepthFrame2Color', this.objectHandle, varargin{1},uint32(inputSize));
-        end
+               
+%         function varargout = mapDepthFrame2Color(this, varargin)
+%             % NOT READY YET
+%             % mapDepthFrame2Color - map an input depth image
+%             % to color coordinates.
+%             % Input: cDepthHeight x cDepthWidth matrix
+%             % Output: cDepthHeight x cDepthWidth x 2(x,y) mapping matrix.
+%             inputSize = size(varargin{1},1);
+%             [varargout{1:nargout}] = Kin2_mex('mapDepthFrame2Color', this.objectHandle, varargin{1},uint32(inputSize));
+%         end
                 
         function varargout = mapDepthPoints2Camera(this, varargin)
             % mapDepthPoints2Camera - map from depth to camera space.
@@ -599,7 +672,7 @@ classdef Kin2 < handle
             % See mapping2CamDemo.m
             inputSize = size(varargin{1},1);
             [varargout{1:nargout}] = Kin2_mex('mapCameraPoints2Color', this.objectHandle, varargin{1},uint32(inputSize));
-        end
+        end                  
         
         %% Skeleton functions
                 
@@ -622,6 +695,13 @@ classdef Kin2 < handle
             % -LeftHandState: state of the left hand
             % -RightHandState: state of the right hand
             % See bodyDemo.m
+            
+            % Verify that the body source was selected
+            if ~this.flag_body
+                this.delete;
+                error('No body source selected!');
+            end
+            
             quatType = ismember('Quat',varargin);
             eulerType = ismember('Euler',varargin);
             orientType = uint32(0); % Quaternion by default
@@ -837,9 +917,8 @@ classdef Kin2 < handle
                 end
             end
         end
-    end
     
-    function drawHDFaces(this,handle,faces,displayPoints,displayText,fontSize)
+        function drawHDFaces(this,handle,faces,displayPoints,displayText,fontSize)
             % drawHDFaces: display the HD faces data and face model.
             % Input Parameters: 
             % 1) handle: image axes
@@ -918,9 +997,7 @@ classdef Kin2 < handle
                 end
 
             end
-    end
-        
-    
+        end            
         
         %% Kinect Fusion
          function varargout = KF_init(this, varargin)
@@ -953,7 +1030,9 @@ classdef Kin2 < handle
             [varargout{1:nargout}] = Kin2_mex('KF_reset', this.objectHandle, varargin{:});
          end
          
-         methods(Access = protected)            
+    end
+         
+    methods(Access = protected)            
         function str = decodeFaceProperties(this,detectionResult)
             % decodeFaceProperties: return description of face property. 
             % This function can be used to display the name of

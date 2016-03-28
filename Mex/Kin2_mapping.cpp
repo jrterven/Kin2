@@ -204,17 +204,38 @@ void Kin2::mapDepthPoints2Camera(double depthCoords[], int size, double cameraCo
 	delete[] cameraPoints; cameraPoints = NULL;    
 } // end mapDepthPoints2Camera
 
-bool Kin2::mapDepthFrame2Color(ColorSpacePoint* depth2ColorMapping)
+/*
+bool Kin2::mapDepthFrame2Color(UINT16* depth2colorCoordinates)
 {
-	// Create coordinate mapping from depth to color
-	HRESULT hr;
-	hr = m_pCoordinateMapper->MapDepthFrameToColorSpace(cDepthWidth * cDepthHeight,
-		(UINT16*)m_pDepthArray16U, cDepthWidth * cDepthHeight, depth2ColorMapping);
+    HRESULT hr;
+    
+    int numDepthPoints = cDepthWidth * cDepthHeight;
+    
+	// Create coordinate mapping from depth to color	
+    ColorSpacePoint* depth2ColorMapping = new ColorSpacePoint[numDepthPoints];
+    
+	hr = m_pCoordinateMapper->MapDepthFrameToColorSpace(numDepthPoints,
+		(UINT16*)m_pDepthArray16U, numDepthPoints, depth2ColorMapping);
+    
+    if (SUCCEEDED(hr))
+	{		
+		for (int i = 0; i < numDepthPoints; i++)
+		{       
+            depth2colorCoordinates[i] = (int)depth2ColorMapping[i].X;
+            depth2colorCoordinates[i + numDepthPoints] = (int)depth2ColorMapping[i].Y;
+        }
+    }    
+	else
+    {
+        colorCoords[0] = 0;
+		colorCoords[1] = 0;
+		mexPrintf("Mapping error.\n");
+    }
 
 	if (SUCCEEDED(hr)) return true;
 	else return false;
 } // end mapDepthFrame2Color
-
+*/
 
 ///////// Function: mapColorPoint2Depth //////////////////////////////
 // Map points in color coordinates to points in depth coordinates
@@ -387,3 +408,56 @@ void Kin2::mapCameraPoints2Color(double cameraCoords[], int size, UINT16 colorCo
     delete[] colorPoints; colorPoints = NULL;
 	delete[] camPoints; camPoints = NULL; 
 } // end mapCameraPoints2Color    
+
+void Kin2::alignColor2Depth(unsigned char alignedImage[], bool& validData)
+{
+    HRESULT hr;    
+    const int numDepthPoints = cDepthWidth * cDepthHeight;
+   
+	// Map from depth to color	
+    ColorSpacePoint depth2ColorMapping[numDepthPoints];
+    
+	hr = m_pCoordinateMapper->MapDepthFrameToColorSpace(numDepthPoints,
+		(UINT16*)m_pDepthArray16U, numDepthPoints, depth2ColorMapping);
+
+    // fill up the output matrix with R,G,B values from the current color image
+    if (SUCCEEDED(hr))
+    {		
+        int colorCoordX, colorCoordY;
+        for (int x=0, k=0; x < cDepthWidth; x++)
+        {
+            for (int y=0; y <cDepthHeight; y++,k++)
+            {
+                int idx = y * cDepthWidth + x;
+                colorCoordX = (UINT16)depth2ColorMapping[idx].X;
+                colorCoordY = (UINT16)depth2ColorMapping[idx].Y;
+
+                // Sample the RGB components from the color image
+                unsigned char R=0, G=0, B=0;
+
+                // first make sure the coordinates maps to a valid point in color space
+                int colorX = (int)(floor(colorCoordX + 0.5));
+                int colorY = (int)(floor(colorCoordY + 0.5));
+                if ((colorX >= 0) && (colorX < cColorWidth) && (colorY >= 0) && (colorY < cColorHeight))
+                {
+                    // calculate index into color array
+                    int colorIndex = (colorX + (colorY * cColorWidth)) * 4;
+
+                   R = m_pColor[colorIndex];
+                   G = m_pColor[colorIndex + 1];
+                   B = m_pColor[colorIndex + 2];
+                }
+
+                alignedImage[k] = R;
+                alignedImage[k + numDepthPoints] = G;
+                alignedImage[k + numDepthPoints + numDepthPoints] = B;
+            }
+        }        
+        validData = true;
+    }
+    else
+    {
+        validData = false;
+        mexPrintf("Depth to Color Mapping error.\n");
+    }
+} // end alignColor2Depth
