@@ -109,7 +109,7 @@ public:
     void getColor(unsigned char rgbImage[], bool& validColor);
     void getInfrared(UINT16 infrared[],bool& validInfrared);
     void getBodyIndex(BYTE bodyIndex[],bool& validBodyIndex);
-    void getPointCloud(double pointCloud[], unsigned char colors[], int size, bool color, bool& validData);    
+    void getPointCloud(double pointCloud[], unsigned char colors[], bool color, bool& validData);    
     void getDepthIntrinsics(CameraIntrinsics &intrinsics);
     
     /************ Mappings **************/

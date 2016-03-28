@@ -11,15 +11,15 @@
 // You must call updateData first and have depth activated
 ///////////////////////////////////////////////////////////////////////////
 
-void Kin2::getPointCloud(double pointCloud[], unsigned char colors[], int size, bool color, bool& validData)
+void Kin2::getPointCloud(double pointCloud[], unsigned char colors[], bool color, bool& validData)
 {   
     // Create coordinate mapping from depth to camera
 	HRESULT hr;
-	int numDepthPoints = size;
+	const int numDepthPoints = cDepthWidth * cDepthHeight;
 
     if(m_newPointCloudData)
     {
-        CameraSpacePoint* cameraPoints = new CameraSpacePoint[numDepthPoints];	
+        CameraSpacePoint cameraPoints[numDepthPoints];	
         hr = m_pCoordinateMapper->MapDepthFrameToCameraSpace(numDepthPoints,
             (UINT16*)m_pDepthArray16U, numDepthPoints, cameraPoints);
 
@@ -30,7 +30,7 @@ void Kin2::getPointCloud(double pointCloud[], unsigned char colors[], int size, 
             if(color)
             {
                 // map camera points to color space
-                ColorSpacePoint* colorPoints = new ColorSpacePoint[numDepthPoints];
+                ColorSpacePoint colorPoints[numDepthPoints];
                 hr = m_pCoordinateMapper->MapCameraPointsToColorSpace(numDepthPoints, 
                     cameraPoints, numDepthPoints, colorPoints);
     
@@ -60,8 +60,8 @@ void Kin2::getPointCloud(double pointCloud[], unsigned char colors[], int size, 
                         }
                         
                         colors[i] = R;
-                        colors[i + size] = G;
-                        colors[i + size + size] = B;
+                        colors[i + numDepthPoints] = G;
+                        colors[i + numDepthPoints + numDepthPoints] = B;
                     }
                 }    
             } // if color
@@ -75,8 +75,8 @@ void Kin2::getPointCloud(double pointCloud[], unsigned char colors[], int size, 
                 Z = cameraPoints[i].Z;
 
                 pointCloud[i] = X;
-                pointCloud[i + size] = Y;
-                pointCloud[i + size + size] = Z;
+                pointCloud[i + numDepthPoints] = Y;
+                pointCloud[i + numDepthPoints + numDepthPoints] = Z;
             }
         } // If successfull depth to camera space mapping   
         else
@@ -86,9 +86,6 @@ void Kin2::getPointCloud(double pointCloud[], unsigned char colors[], int size, 
             pointCloud[2] = 0;
             mexPrintf("Error getting depth-to-camera mapping.\n");
         }
-
-        delete[] cameraPoints; 
-        cameraPoints = NULL;
     }
     validData = m_newPointCloudData;
     m_newPointCloudData = false;

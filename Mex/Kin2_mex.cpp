@@ -218,7 +218,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
       
         // Call the class function
         bool validData;
-        Kin2_instance->getPointCloud(pointCloud,colors,size, bwithColor, validData);
+        Kin2_instance->getPointCloud(pointCloud,colors,bwithColor, validData);
         
         if(!validData)
         {
