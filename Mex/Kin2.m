@@ -195,7 +195,7 @@ classdef Kin2 < handle
             if this.flag_infrared, flags = flags + 2; end
             if this.flag_depth, flags = flags + 8; end
             if this.flag_bodyIndex, flags = flags + 16; end
-            if this.flag_body, flags = flags + 32; end    
+            if this.flag_body, flags = flags + 32; end     
             if this.flag_face, flags = flags + 128; end
             if this.flag_hd_face, flags = flags + 256; end
             
@@ -325,9 +325,9 @@ classdef Kin2 < handle
             defaultColor = 'false';
             expectedColors = {'true','false'};
             
-            addParameter(p,'output',defaultOutput,@(x) any(validatestring(x,expectedOutputs)));
-            addParameter(p,'color',defaultColor,@(x) any(validatestring(x,expectedColors)));
-            parse(p,varargin{:});
+            p.addParameter('output',defaultOutput,@(x) any(validatestring(x,expectedOutputs)));
+            p.addParameter('color',defaultColor,@(x) any(validatestring(x,expectedColors)));
+            p.parse(varargin{:});
             
             % Required color?
             if strcmp(p.Results.color,'true')
@@ -363,7 +363,7 @@ classdef Kin2 < handle
                     end
                 end  
             end                     
-        end
+        end        
         
         function varargout = getFaces(this, varargin)
             % getFaces - returns structure array with faces data.
@@ -428,8 +428,8 @@ classdef Kin2 < handle
             defaultOutput = 'true';
             expectedOutputs = {'true','false'};
             
-            addParameter(p,'WithVertices',defaultOutput,@(x) any(validatestring(x,expectedOutputs)));
-            parse(p,varargin{:});
+            p.addParameter('WithVertices',defaultOutput,@(x) any(validatestring(x,expectedOutputs)));
+            p.parse(varargin{:});
             
             % Required HD vertices?
             if strcmp(p.Results.WithVertices,'true')
@@ -471,10 +471,10 @@ classdef Kin2 < handle
             defaultCaptureStatus = 'false';
             expectedCaptureStatus = {'true','false'};
 
-            addParameter(p,'CollectionStatus',defaultCollectionStatus,@(x) any(validatestring(x,expectedCollectionStatus)));
-            addParameter(p,'CaptureStatus',defaultCaptureStatus,@(x) any(validatestring(x,expectedCaptureStatus)));
+            p.addParameter('CollectionStatus',defaultCollectionStatus,@(x) any(validatestring(x,expectedCollectionStatus)));
+            p.addParameter('CaptureStatus',defaultCaptureStatus,@(x) any(validatestring(x,expectedCaptureStatus)));
             
-            parse(p,varargin{:});
+            p.parse(varargin{:});
                        
             % Call the C++ buildHDFaceModels
             % This function returns two codes:
@@ -678,22 +678,28 @@ classdef Kin2 < handle
                 
         function varargout = getBodies(this, varargin)
             % getBodies - Get 3D bodies joints.
+            % [bodies, fcp] = getBodies(Input)
             % Input: Type of joints orientation output. It can be 'Quat' or
             % 'Euler'
-            % Output: Structure array.
-            % The structure array (bodies) contains 6 bodies at most
-            % Each body has:
-            % -Position: 3x25 matrix containing the x,y,z of the 25 joints in
-            %   camera space coordinates
-            % - Orientation: 
-            %   If input parameter is 'Quat': 4x25 matrix containing the 
-            %   orientation of each joint in [x; y; z; w]
-            %   If input parameter is 'Euler': 3x25 matrix containing the 
-            %   orientation of each joint in [Pitch; Yaw; Roll] 
-            % -TrackingState: state of each joint. These can be:
-            %   NotTracked=0, Inferred=1, or Tracked=2
-            % -LeftHandState: state of the left hand
-            % -RightHandState: state of the right hand
+            % Outputs:
+            % 1) bodies: Structure array.
+            %   The structure array (bodies) contains 6 bodies at most
+            %   Each body has:
+            %   -Position: 3x25 matrix containing the x,y,z of the 25 joints in
+            %       camera space coordinates
+            %   - Orientation: 
+            %       If input parameter is 'Quat': 4x25 matrix containing the 
+            %       orientation of each joint in [x; y; z; w]
+            %       If input parameter is 'Euler': 3x25 matrix containing the 
+            %       orientation of each joint in [Pitch; Yaw; Roll] 
+            %   -TrackingState: state of each joint. These can be:
+            %       NotTracked=0, Inferred=1, or Tracked=2
+            %   -LeftHandState: state of the left hand
+            %   -RightHandState: state of the right hand
+            % 2) fcp: Floor clip plane in [x y z w]. Floor clip plane of the 
+            %   body frame in hessian normal form. 
+            %   The (x,y,z) components are a unit vector indicating the normal 
+            %   of the plane, and w is the distance from the plane to the origin in meters. 
             % See bodyDemo.m
             
             % Verify that the body source was selected

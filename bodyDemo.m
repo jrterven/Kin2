@@ -90,24 +90,28 @@ while true
         %   NotTracked=0, Inferred=1, or Tracked=2
         % -LeftHandState: state of the left hand
         % -RightHandState: state of the right hand
-        bodies = k2.getBodies('Quat');
+        [bodies, fcp] = k2.getBodies('Quat');
         
         % Number of bodies detected
         numBodies = size(bodies,2);
         %disp(['Bodies Detected: ' num2str(numBodies)])
        
-        if numBodies > 0
+        % Example of how to extract information from getBodies output.
+       %if numBodies > 0
             % first body info:
             %disp(bodies(1).TrackingState)
             %disp(bodies(1).RightHandState)
             %disp(bodies(1).LeftHandState)
             
-            disp(bodies(1).Orientation(:,12));           
-
+            %disp('Right Hand Orientation') % see Kin2.m constants
+            %disp(bodies(1).Orientation(:,k2.JointType_HandRight));   
+            
+            %disp('Floor Clip Plane')
+            %disp(fcp);
         
             % To get the joints on depth image space, you can use:
-%             pos2D = k2.mapCameraPoints2Depth(bodies(1).Position');
-         end
+            %pos2D = k2.mapCameraPoints2Depth(bodies(1).Position');
+        %end
          
         %To get the joints on color image space, you can use:
         %pos2D = k2.mapCameraPoints2Color(bodies(1).Position');

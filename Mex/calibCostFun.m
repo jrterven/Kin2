@@ -64,15 +64,15 @@ function fun = calibCostFun(x0)
 
     % Apply Intrinsic parameters to get the projection
     proj = intrinsic * proj;
+    % Dehomogenization
     proj = proj ./ repmat(proj(3,:),3,1);
 
-    % Distortion correction
     u = proj(1,:);
     v = proj(2,:);
     ud=xc(1,:);
     vd=xc(2,:);   
     
-    % Get the normalized coordinates in the image plane
+    % Normalized coordinates in the image plane
     un = (u - cx)/f;
     vn = (v - cy)/f;
 

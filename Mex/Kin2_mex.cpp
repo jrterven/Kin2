@@ -228,7 +228,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         
         return;
  
-    }
+    }    
     
     // getDepthIntrinsics method
     if (!strcmp("getDepthIntrinsics", cmd)) 
@@ -555,14 +555,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         std::vector<std::vector<JointOrientation> > bodiesJointsOrientations;
         std::vector<HandState> lhs;
         std::vector<HandState> rhs;
+        Vector4 floorClipPlane;
                 
-        Kin2_instance->getBodies(bodiesJoints,bodiesJointsOrientations,lhs,rhs);
+        Kin2_instance->getBodies(bodiesJoints,bodiesJointsOrientations,lhs,rhs,floorClipPlane);
         
         int bodiesSize = bodiesJoints.size();
         
         //Allocate memory for the structure
         mwSize dims[2] = {1, bodiesSize};
         plhs[0] = mxCreateStructArray(2,dims,5,field_names);
+        
+        // And for the Floor clip plane output
+        mwSize fcpSize[2] = {1, 4};
+        plhs[1] = mxCreateNumericArray(2,fcpSize, mxDOUBLE_CLASS, mxREAL);
+        double *fcp = (double*)mxGetPr(plhs[1]);
+        fcp[0] = floorClipPlane.x;
+        fcp[1] = floorClipPlane.y;
+        fcp[2] = floorClipPlane.z;
+        fcp[3] = floorClipPlane.w;
         
         // Copy number of bodies to output variable
         //numBodies[0] = (int)bodiesJoints.size();
@@ -634,7 +644,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mxSetFieldByNumber(plhs[0],i,2, trackingState);
             mxSetFieldByNumber(plhs[0],i,3, leftHandState);
             mxSetFieldByNumber(plhs[0],i,4, rightHandState);
-        }
+        } // for each body joint
         
         return;
     }

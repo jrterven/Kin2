@@ -39,6 +39,7 @@
 ///         Mar/15/2016: Add radial distortion to the color camera calibration
 ///         Mar/18/2016: Fix HD face shape units
 ///         Mar/25/2016: Update documentation
+///         Mar/31/2016: Add floor clip plane to the body data
 ///////////////////////////////////////////////////////////////////////////
 #include <Kinect.h>
 #include <NuiKinectFusionApi.h>
@@ -128,7 +129,7 @@ public:
     /************ Body Tracking *****************/
     void getBodies(std::vector<std::vector<Joint> >& bodiesJoints,
         std::vector<std::vector<JointOrientation> >& bodiesJointsOrientations,
-        std::vector<HandState>& lhs, std::vector<HandState>& rhs);
+        std::vector<HandState>& lhs, std::vector<HandState>& rhs, Vector4 &fcp);
     
     /************ Face Processing public functions *****************/
     void getFaces(std::vector<k2::FaceData>& facesData);
@@ -161,6 +162,9 @@ private:
     // Heap storage for bodies
 	IBody*		m_ppBodies[BODY_COUNT];
     bool		m_bHaveBodyData;
+    
+    // Bodies floor clip plane
+	Vector4		m_floorClipPlane;
     
 	// Face sources
 	IFaceFrameSource*       m_pFaceFrameSources[BODY_COUNT];
@@ -207,7 +211,9 @@ private:
 		| FaceFrameFeatures::FaceFrameFeatures_Glasses
 		| FaceFrameFeatures::FaceFrameFeatures_FaceEngagement;
     
-     /*************** Kinect Fusion private variables and functions ***************/
+     /************************************************************/
+	/******  Kinect Fusion variables and functions ******/
+	/************************************************************/
 	static const int            cResetOnTimeStampSkippedMilliseconds = 1000;  // ms
 	static const int            cResetOnNumberOfLostFrames = 100;
 

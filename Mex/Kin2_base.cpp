@@ -35,6 +35,7 @@
 ///         Mar/09/2016: Add pointclouds with color and pointCloud MATLAB object
 ///         Mar/15/2016: Add radial distortion to the color camera calibration
 ///         Mar/18/2016: Fix HD face shape units
+///         Mar/31/2016: Add floor clip plane to the body data
 ///////////////////////////////////////////////////////////////////////////
 #include "Kin2.h"
 #include "mex.h"
@@ -58,6 +59,7 @@ Kin2::Kin2(UINT16 sources):
     m_bHaveBodyData(false),
     m_newBodyIndex(false),
     m_newPointCloudData(false),
+    // Kinect Fusion variables
     m_pVolume(nullptr),
     m_cDepthImagePixels(0),
     m_bMirrorDepthFrame(false),
@@ -158,7 +160,7 @@ Kin2::~Kin2()
 	SafeRelease(m_pCoordinateMapper);
 
 	if (nullptr != m_pCoordinateMapper)
-		m_pCoordinateMapper->UnsubscribeCoordinateMappingChanged(m_coordinateMappingChangedEvent);
+		m_pCoordinateMapper->UnsubscribeCoordinateMappingChanged(m_coordinateMappingChangedEvent);        
 
 	//SAFE_FUSION_RELEASE_IMAGE_FRAME(m_pShadedSurface);
 	//SAFE_FUSION_RELEASE_IMAGE_FRAME(m_pPointCloud);
@@ -225,7 +227,7 @@ Kin2::~Kin2()
 void Kin2::init()
 {
     HRESULT hr;
-
+    
     hr = GetDefaultKinectSensor(&m_pKinectSensor);
     if (FAILED(hr))
     {
@@ -260,7 +262,7 @@ void Kin2::init()
 			{
 				validFlags = validFlags & ~k2::HD_FACE | k2::BODY;
 				m_flags = m_flags | k2::BODY;
-			}
+			}            
                         
             hr = m_pKinectSensor->OpenMultiSourceFrameReader(
                 validFlags,&m_pMultiSourceFrameReader);
@@ -364,7 +366,7 @@ void Kin2::init()
                 return;
             }
         } // for each body
-	} // if (m_flags & k2::HD_FACE)
+	} // if (m_flags & k2::HD_FACE)        
 } // end init
 
 ///////// Function: updateData ///////////////////////////////////////////
@@ -510,12 +512,17 @@ void Kin2::updateData(INT8 valid[])
 
 				hr = pBodyFrame->GetAndRefreshBodyData(_countof(m_ppBodies), m_ppBodies);
                 m_bHaveBodyData = SUCCEEDED(hr);
+                
+                if (SUCCEEDED(hr))
+				{
+					pBodyFrame->get_FloorClipPlane(&m_floorClipPlane);
+				}
 			}
 
 			SafeRelease(pBodyFrame);
 			SafeRelease(pBodyFrameReference);
 		}
-	}
+	}        
   
     if (SUCCEEDED(hr))
     {
@@ -609,10 +616,13 @@ void Kin2::getBodyIndex(BYTE bodyIndex[],bool& validBodyIndex)
 
 void Kin2::getBodies(std::vector<std::vector<Joint> >& bodiesJoints,
         std::vector<std::vector<JointOrientation> >& bodiesJointsOrientations,
-        std::vector<HandState>& lhs, std::vector<HandState>& rhs)
+        std::vector<HandState>& lhs, std::vector<HandState>& rhs, Vector4 &fcp)
 {
 	HRESULT hr;
 
+    if(m_bHaveBodyData)
+        fcp = m_floorClipPlane;
+        
 	for (int i = 0; i < BODY_COUNT; ++i)
 	{
 		IBody* pBody = m_ppBodies[i];
