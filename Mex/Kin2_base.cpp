@@ -53,6 +53,10 @@ Kin2::Kin2(UINT16 sources):
     m_pColor(NULL),    
     m_pInfraredArray16U(NULL),
     m_pBodyIndex(NULL),
+    m_depthTimeStamp(0),
+    m_colorTimeStamp(0),
+    m_infraredTimeStamp(0),
+    m_bodiesTimeStamp(0),
     m_newDepthData(false),
     m_newColorData(false),
     m_newInfraredData(false),
@@ -395,6 +399,10 @@ void Kin2::updateData(INT8 valid[])
             if (SUCCEEDED(hr))
                 hr = pDepthFrameReference->AcquireFrame(&pDepthFrame);
 
+            // get the timestamp
+            if (SUCCEEDED(hr))
+                hr = pDepthFrame->get_RelativeTime(&m_depthTimeStamp);
+                
             // Copy underlying buffer to member variable
             if (SUCCEEDED(hr))
                 hr = pDepthFrame->CopyFrameDataToArray(cDepthWidth * cDepthHeight, m_pDepthArray16U);
@@ -424,6 +432,9 @@ void Kin2::updateData(INT8 valid[])
                 hr = pColorFrameReference->AcquireFrame(&pColorFrame);
             
             if (SUCCEEDED(hr))
+                hr = pColorFrame->get_RelativeTime(&m_colorTimeStamp);
+                
+            if (SUCCEEDED(hr))
             {
                 UINT nColorBufferSize = cColorWidth * cColorHeight * 4;
                 hr = pColorFrame->CopyConvertedFrameDataToArray(nColorBufferSize, m_pColor, ColorImageFormat_Rgba);
@@ -451,6 +462,9 @@ void Kin2::updateData(INT8 valid[])
             if (SUCCEEDED(hr))
                 hr = pInfraredReference->AcquireFrame(&pInfraredFrame);
             
+            if (SUCCEEDED(hr))
+                hr = pInfraredFrame->get_RelativeTime(&m_infraredTimeStamp);
+             
             if (SUCCEEDED(hr))
                hr = pInfraredFrame->CopyFrameDataToArray(cInfraredHeight*cInfraredWidth, m_pInfraredArray16U);
 
@@ -502,6 +516,9 @@ void Kin2::updateData(INT8 valid[])
 				hr = pBodyFrameReference->AcquireFrame(&pBodyFrame);
 			}
 
+            if (SUCCEEDED(hr))
+                hr = pBodyFrame->get_RelativeTime(&m_bodiesTimeStamp);
+            
 			if (SUCCEEDED(hr))
 			{
 				for (int i = 0; i < BODY_COUNT; ++i)
@@ -538,16 +555,16 @@ void Kin2::updateData(INT8 valid[])
 // Copy depth frame to Matlab matrix
 // You must call updateData first
 //////////////////////////////////////////////////////////////////////////
-void Kin2::getDepth(UINT16 depth[],bool& validDepth)
+void Kin2::getDepth(UINT16 depth[], INT64& time, bool& validDepth)
 {
     if(m_newDepthData)
     {
- //       mexPrintf("bufferSize=%d\n",m_dBufferSize);
         // Copy Depth frame to output matrix
         for (int x=0, k=0;x<cDepthWidth;x++)
             for (int y=0;y<cDepthHeight;y++,k++)              
                 depth[k] = m_pDepthArray16U[y*cDepthWidth+x];
-//                  depth[k] = m_pdBuffer[y*cDepthWidth+x];
+        
+        time = m_depthTimeStamp;
     }
     
     validDepth = m_newDepthData;
@@ -558,7 +575,7 @@ void Kin2::getDepth(UINT16 depth[],bool& validDepth)
 // Copy color frame to Matlab matrix
 // You must call updateData first
 //////////////////////////////////////////////////////////////////////////
-void Kin2::getColor(unsigned char rgbImage[], bool& validColor)
+void Kin2::getColor(unsigned char rgbImage[], INT64& time, bool& validColor)
 {
     if(m_newColorData)
     {         
@@ -573,6 +590,8 @@ void Kin2::getColor(unsigned char rgbImage[], bool& validColor)
                 rgbImage[cNumColorPix + k] = m_pColor[++idx];
                 rgbImage[cNumColorPix*2 + k] = m_pColor[++idx];                   
             }
+        
+        time = m_colorTimeStamp;
     }
     validColor = m_newColorData;
     m_newColorData = false;
@@ -582,14 +601,16 @@ void Kin2::getColor(unsigned char rgbImage[], bool& validColor)
 // Copy infrared frame to Matlab matrix
 // You must call updateData first
 ///////////////////////////////////////////////////////////////////////////
-void Kin2::getInfrared(UINT16 infrared[],bool& validInfrared)
+void Kin2::getInfrared(UINT16 infrared[], INT64& time, bool& validInfrared)
 {
     if (m_newInfraredData)
     {
         // sweep the entire matrix copying data to output matrix
         for (int x=0, k=0;x<cInfraredWidth;x++)
             for (int y=0;y<cInfraredHeight;y++,k++)              
-                infrared[k] = m_pInfraredArray16U[y*cInfraredWidth+x];           
+                infrared[k] = m_pInfraredArray16U[y*cInfraredWidth+x];  
+        
+        time = m_infraredTimeStamp;
     }
 
      validInfrared = m_newInfraredData;
@@ -600,7 +621,7 @@ void Kin2::getInfrared(UINT16 infrared[],bool& validInfrared)
 // Copy getBodyIndex frame to Matlab matrix
 // You must call updateData first
 //////////////////////////////////////////////////////////////////////////
-void Kin2::getBodyIndex(BYTE bodyIndex[],bool& validBodyIndex)
+void Kin2::getBodyIndex(BYTE bodyIndex[], bool& validBodyIndex)
 {
     if(m_newBodyIndex)
     {
@@ -616,12 +637,20 @@ void Kin2::getBodyIndex(BYTE bodyIndex[],bool& validBodyIndex)
 
 void Kin2::getBodies(std::vector<std::vector<Joint> >& bodiesJoints,
         std::vector<std::vector<JointOrientation> >& bodiesJointsOrientations,
-        std::vector<HandState>& lhs, std::vector<HandState>& rhs, Vector4 &fcp)
+        std::vector<HandState>& lhs, std::vector<HandState>& rhs, 
+        Vector4 &fcp, INT64& time)
 {
 	HRESULT hr;
 
     if(m_bHaveBodyData)
+    {
         fcp = m_floorClipPlane;
+        time = m_bodiesTimeStamp;
+    }
+    else
+    {
+        time = 0;
+    }
         
 	for (int i = 0; i < BODY_COUNT; ++i)
 	{

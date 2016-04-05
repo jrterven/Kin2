@@ -76,26 +76,31 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     // getDepth method
     if (!strcmp("getDepth", cmd)) 
     {        
-         UINT16 *depth; // pointer to output data
+         UINT16 *depth; // pointer to output data 0
          int depthDim[2]={424,512};
          int invalidDepth[2] = {0,0};
+         int timeDim[2] = {1,1};
          
         // Check parameters
         if (nlhs < 0 || nrhs < 2)
             mexErrMsgTxt("getDepth: Unexpected arguments.");
         
-        // Call the method
+        // Reserve space for output variables
         plhs[0] = mxCreateNumericArray(2, depthDim, mxUINT16_CLASS, mxREAL);
-        
-        // Assign pointers to the output parameters
         depth = (UINT16*)mxGetPr(plhs[0]);
-      
+        
+        plhs[1] = mxCreateNumericArray(2,timeDim, mxINT64_CLASS, mxREAL);
+        INT64 *timeStamp = (INT64*)mxGetPr(plhs[1]);
+        
         // Call the class function
         bool validDepth;
-        Kin2_instance->getDepth(depth,validDepth);
+        Kin2_instance->getDepth(depth,*timeStamp,validDepth);
         
         if(!validDepth)
+        {
             plhs[0] = mxCreateNumericArray(2, invalidDepth, mxUINT16_CLASS, mxREAL);
+            timeStamp[0] = 0;
+        }
         
         return;
     }
@@ -106,23 +111,30 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         unsigned char *rgbImage;    // pointer to output data
         int colorDim[3]={1080,1920,3};
         int invalidColor[3] = {0,0,0};
+        int timeDim[2] = {1,1};
         
         // Check parameters
         if (nlhs < 0 || nrhs < 2)
             mexErrMsgTxt("getColor: Unexpected arguments.");
         
-        // Call the method
+        // Reserve space for outputs
         plhs[0] = mxCreateNumericArray(3, colorDim, mxUINT8_CLASS, mxREAL);
+        
+        plhs[1] = mxCreateNumericArray(2,timeDim, mxINT64_CLASS, mxREAL);
+        INT64 *timeStamp = (INT64*)mxGetPr(plhs[1]);
         
         // Assign pointers to the output parameters
         rgbImage = (unsigned char*)mxGetPr(plhs[0]);
       
         // Call the class function
         bool validColor;
-        Kin2_instance->getColor(rgbImage,validColor);
+        Kin2_instance->getColor(rgbImage,*timeStamp,validColor);
         
         if(!validColor)
+        {
             plhs[0] = mxCreateNumericArray(3, invalidColor, mxUINT8_CLASS, mxREAL);
+            timeStamp[0] = 0;
+        }
         
         return;
     }
@@ -133,23 +145,30 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         UINT16 *infrared;   // pointer to output data
         int infraredDim[2]={424,512};
         int invalidInfrared[2] = {0,0};
+        int timeDim[2] = {1,1};
         
         // Check parameters
         if (nlhs < 0 || nrhs < 2)
             mexErrMsgTxt("getInfrared: Unexpected arguments.");
         
-        // Reserve space for output array
+        // Reserve space for outputs
         plhs[0] = mxCreateNumericArray(2, infraredDim, mxUINT16_CLASS, mxREAL); 
+        
+        plhs[1] = mxCreateNumericArray(2,timeDim, mxINT64_CLASS, mxREAL);
+        INT64 *timeStamp = (INT64*)mxGetPr(plhs[1]);
         
         // Assign pointers to the output parameters
         infrared = (UINT16*)mxGetPr(plhs[0]);
       
         // Call the class function
         bool validInfrared;
-        Kin2_instance->getInfrared(infrared, validInfrared);
+        Kin2_instance->getInfrared(infrared, *timeStamp, validInfrared);
         
         if(!validInfrared)
+        {
             plhs[0] = mxCreateNumericArray(2, invalidInfrared, mxUINT16_CLASS, mxREAL);
+            timeStamp[0] = 0;
+        }
         
         return;
     }
@@ -555,9 +574,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         std::vector<std::vector<JointOrientation> > bodiesJointsOrientations;
         std::vector<HandState> lhs;
         std::vector<HandState> rhs;
-        Vector4 floorClipPlane;
+        Vector4 floorClipPlane; 
+        INT64 time = 0;
                 
-        Kin2_instance->getBodies(bodiesJoints,bodiesJointsOrientations,lhs,rhs,floorClipPlane);
+        Kin2_instance->getBodies(bodiesJoints,bodiesJointsOrientations,lhs,rhs,floorClipPlane,time);
         
         int bodiesSize = bodiesJoints.size();
         
@@ -565,7 +585,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mwSize dims[2] = {1, bodiesSize};
         plhs[0] = mxCreateStructArray(2,dims,5,field_names);
         
-        // And for the Floor clip plane output
+        // Allocate memory for the Floor clip plane output
         mwSize fcpSize[2] = {1, 4};
         plhs[1] = mxCreateNumericArray(2,fcpSize, mxDOUBLE_CLASS, mxREAL);
         double *fcp = (double*)mxGetPr(plhs[1]);
@@ -573,6 +593,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         fcp[1] = floorClipPlane.y;
         fcp[2] = floorClipPlane.z;
         fcp[3] = floorClipPlane.w;
+        
+        // Allocate memory for the timestamp
+        mwSize timeDim[2] = {1, 1};
+        plhs[2] = mxCreateNumericArray(2,timeDim, mxINT64_CLASS, mxREAL);
+        INT64 *timeStamp = (INT64*)mxGetPr(plhs[2]);
+        
+        if(bodiesJoints.size() > 0)
+            timeStamp[0] = time;
+        else
+             timeStamp[0] = 0;
         
         // Copy number of bodies to output variable
         //numBodies[0] = (int)bodiesJoints.size();

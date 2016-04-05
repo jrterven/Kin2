@@ -106,9 +106,9 @@ public:
     
     /************ Data Sources *************/
     void updateData(INT8 valid[]);
-    void getDepth(UINT16 depth[],bool& validDepth);
-    void getColor(unsigned char rgbImage[], bool& validColor);
-    void getInfrared(UINT16 infrared[],bool& validInfrared);
+    void getDepth(UINT16 depth[],INT64& time, bool& validDepth);
+    void getColor(unsigned char rgbImage[], INT64& time, bool& validColor);
+    void getInfrared(UINT16 infrared[], INT64& time, bool& validInfrared);
     void getBodyIndex(BYTE bodyIndex[],bool& validBodyIndex);
     void getPointCloud(double pointCloud[], unsigned char colors[], bool color, bool& validData);    
     void getDepthIntrinsics(CameraIntrinsics &intrinsics);
@@ -129,7 +129,7 @@ public:
     /************ Body Tracking *****************/
     void getBodies(std::vector<std::vector<Joint> >& bodiesJoints,
         std::vector<std::vector<JointOrientation> >& bodiesJointsOrientations,
-        std::vector<HandState>& lhs, std::vector<HandState>& rhs, Vector4 &fcp);
+        std::vector<HandState>& lhs, std::vector<HandState>& rhs, Vector4 &fcp, INT64& time);
     
     /************ Face Processing public functions *****************/
     void getFaces(std::vector<k2::FaceData>& facesData);
@@ -157,7 +157,7 @@ private:
 	UINT16*     m_pDepthArray16U;       // 16-bit depth image
     UINT16*		m_pInfraredArray16U;    // 16-bit infrared image 
 	BYTE*       m_pColor;
-    BYTE*		m_pBodyIndex;
+    BYTE*		m_pBodyIndex;    
     
     // Heap storage for bodies
 	IBody*		m_ppBodies[BODY_COUNT];
@@ -165,6 +165,12 @@ private:
     
     // Bodies floor clip plane
 	Vector4		m_floorClipPlane;
+    
+    // Timestamps
+    INT64       m_depthTimeStamp;
+    INT64       m_colorTimeStamp;
+    INT64       m_infraredTimeStamp;
+    INT64       m_bodiesTimeStamp;
     
 	// Face sources
 	IFaceFrameSource*       m_pFaceFrameSources[BODY_COUNT];

@@ -216,8 +216,8 @@ classdef Kin2 < handle
         end
                 
         function varargout = getDepth(this, varargin)
-            % getDepth - returns depth frame from Kinect V2. 
-            % Returns a 512 x 424 16-bit depth frame. 
+            % depth = getDepth - returns a 512 x 424 16-bit depth frame frame from Kinect V2. 
+            % [depth, timeStamp] = getDepth - also returns the relative timestamp. 
             % You must call updateData before and verify that there is valid data.
             % See videoDemo.m
             
@@ -231,8 +231,8 @@ classdef Kin2 < handle
         end
                 
         function varargout = getColor(this, varargin)
-            % getColor - returns color frame from Kinect V2. 
-            % Returns a 1920 x 1080 3-channel color frame.
+            % color = getColor - returns a 1920 x 1080 3-channel color frame frame from Kinect V2. 
+            % [color, timeStamp] = getColor - also returns the relative timestamp.
             % You must call updateData before and verify that there is valid data.
             % See videoDemo.m
             
@@ -246,8 +246,8 @@ classdef Kin2 < handle
         end
                 
         function varargout = getInfrared(this, varargin)
-            % getInfrared - returns infrared frame from Kinect V2. 
-            % Returns a 512 x 424 16-bit depth frame. 
+            % infrared = getInfrared - returns a 512 x 424 16-bit infrared frame from Kinect V2. 
+            % [infrared, timeStamp] = getInfrared - also returns the relative timestamp.
             % You must call updateData before and verify that there is valid data.
             % See videoDemo.m
             
@@ -677,8 +677,12 @@ classdef Kin2 < handle
         %% Skeleton functions
                 
         function varargout = getBodies(this, varargin)
-            % getBodies - Get 3D bodies joints.
-            % [bodies, fcp] = getBodies(Input)
+            % bodies = getBodies - Get 3D bodies joints.
+            % [bodies, fcp] = getBodies(Input) - also returns the floor
+            % clip plane of the current bodies.
+            % [bodies, fcp, timeStamp] = getBodies(Input) - also returns
+            % the relative timestamp of the current acquisition.
+            %
             % Input: Type of joints orientation output. It can be 'Quat' or
             % 'Euler'
             % Outputs:

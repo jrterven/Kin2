@@ -68,7 +68,7 @@ while true
         depth = k2.getDepth;
         color = k2.getColor;
         infrared = k2.getInfrared;
-        depthColor = k2.getAlignColor2Depth;
+        depthColor = k2.getAlignColor2Depth;               
         
         % update depth figure
         depth(depth>outOfRange) = outOfRange; % truncate depht
