@@ -18,7 +18,7 @@
 ///         Diana M. Cordova
 ///
 ///     Citation:
-///     J. R. Terven, D. M. Cordova, "A Kinect 2 Toolbox for MATLAB", 
+///     Terven J. Cordova D.M., "Kin2. A Kinect 2 Toolbox for MATLAB", Science of Computer Programming.
 ///     https://github.com/jrterven/Kin2, 2016.
 ///		
 ///		Creation Date: Oct/07/2015

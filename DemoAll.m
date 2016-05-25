@@ -1,3 +1,17 @@
+% DEMOALL Illustrates how to use most of the Kin2 capabilities
+%
+% Note: You must add to the windows path the bin directory containing the 
+%       Kinect20.Face.dll. 
+%       For example: C:\Program Files\Microsoft SDKs\Kinect\v2.0_1409\bin
+%
+% Juan R. Terven, jrterven@hotmail.com
+% Diana M. Cordova, diana_mce@hotmail.com
+% 
+% Citation:
+% Terven J. Cordova D.M., "Kin2. A Kinect 2 Toolbox for MATLAB", Science of
+% Computer Programming.
+% https://github.com/jrterven/Kin2, 2016.
+
 % Specify the data sources
 k2=Kin2('color','depth','infrared','body_index','body', ...
 'face','HDface');
