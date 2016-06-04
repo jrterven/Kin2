@@ -27,3 +27,8 @@ Demos:
 10) faceHDDemo2.m: builds a face model for the user and track the faces using this model.
 11) kinectFusionDemo.m: demonstrates the use of Kinect Fusion. This is still in BETA. Need fixing memory leakage in C++ causing MATLAB to crash on a second run.
 12) calibrationDemo.m: obtain depth camera intrinsic parameters and color camera parameters.
+
+Citation:
+If you find this toolbox useful please cite:
+Terven Juan, Cordova-Esparza Diana,  Kin2. A Kinect 2 Toolbox for MATLAB, 
+Science of Computer Programming, 2016, http://dx.doi.org/10.1016/j.scico.2016.05.009
